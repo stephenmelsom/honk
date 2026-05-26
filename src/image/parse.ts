@@ -1,49 +1,47 @@
 import { lbcdDecode, isErasedFreq } from '../codec/lbcd.ts';
 import { decodeToneWord } from '../codec/tones.ts';
-import {
-  CHANNEL_COUNT,
-  CHANNEL_LAYOUT,
-  IMAGE_SIZE,
-  NAME_LENGTH,
-  OFFSETS,
-  channelOffset,
-  nameOffset,
-} from './layout.ts';
+import type { RadioModel } from '../radios/types.ts';
+import { channelOffset, nameOffset } from '../radios/util.ts';
 import type { Channel, RadioImage } from './schema.ts';
+import { parseSettings } from './settings.ts';
 
-export function parseImage(buf: Uint8Array): RadioImage {
-  if (buf.length !== IMAGE_SIZE) {
-    throw new Error(`Expected ${IMAGE_SIZE}-byte image, got ${buf.length}`);
+export function parseImage(buf: Uint8Array, model: RadioModel): RadioImage {
+  if (buf.length !== model.imageSize) {
+    throw new Error(`Expected ${model.imageSize}-byte ${model.label} image, got ${buf.length}`);
   }
   const raw = new Uint8Array(buf); // own copy
-  const ident = raw.slice(OFFSETS.ident, OFFSETS.ident + 8);
+  const layout = model.memory;
+  const ident = raw.slice(layout.offsets.ident, layout.offsets.ident + layout.identHeaderSize);
 
   const channels: (Channel | null)[] = [];
-  for (let i = 0; i < CHANNEL_COUNT; i++) {
-    channels.push(parseChannel(raw, i));
+  for (let i = 0; i < model.channelCount; i++) {
+    channels.push(parseChannel(raw, model, i));
   }
 
-  return { ident, channels, raw };
+  const settings = parseSettings(raw, model);
+
+  return { radioId: model.id, ident, channels, settings, raw };
 }
 
-function parseChannel(raw: Uint8Array, index: number): Channel | null {
-  const co = channelOffset(index);
-  if (isErasedFreq(raw, co + CHANNEL_LAYOUT.rxfreq.offset)) {
+function parseChannel(raw: Uint8Array, model: RadioModel, index: number): Channel | null {
+  const co = channelOffset(model, index);
+  const ch = model.memory.channel;
+  if (isErasedFreq(raw, co + ch.rxfreq.offset)) {
     return null;
   }
 
-  const rxHz = lbcdDecode(raw, co + CHANNEL_LAYOUT.rxfreq.offset) * 10;
-  const txHz = isErasedFreq(raw, co + CHANNEL_LAYOUT.txfreq.offset)
+  const rxHz = lbcdDecode(raw, co + ch.rxfreq.offset) * 10;
+  const txHz = isErasedFreq(raw, co + ch.txfreq.offset)
     ? rxHz
-    : lbcdDecode(raw, co + CHANNEL_LAYOUT.txfreq.offset) * 10;
+    : lbcdDecode(raw, co + ch.txfreq.offset) * 10;
 
-  const rxToneWord = raw[co + CHANNEL_LAYOUT.rxtone.offset] | (raw[co + CHANNEL_LAYOUT.rxtone.offset + 1] << 8);
-  const txToneWord = raw[co + CHANNEL_LAYOUT.txtone.offset] | (raw[co + CHANNEL_LAYOUT.txtone.offset + 1] << 8);
+  const rxToneWord = raw[co + ch.rxtone.offset] | (raw[co + ch.rxtone.offset + 1] << 8);
+  const txToneWord = raw[co + ch.txtone.offset] | (raw[co + ch.txtone.offset + 1] << 8);
 
-  const b0 = raw[co + CHANNEL_LAYOUT.flagsByte0];
-  const b1 = raw[co + CHANNEL_LAYOUT.flagsByte1];
-  const b2 = raw[co + CHANNEL_LAYOUT.flagsByte2];
-  const b3 = raw[co + CHANNEL_LAYOUT.flagsByte3];
+  const b0 = raw[co + ch.flagsByte0];
+  const b1 = raw[co + ch.flagsByte1];
+  const b2 = raw[co + ch.flagsByte2];
+  const b3 = raw[co + ch.flagsByte3];
 
   // b0: unused1:3, isuhf:1, scode:4  (MSB-first packing per CHIRP bitwise DSL)
   const isUhf = (b0 >> 4) & 0x01;
@@ -60,7 +58,7 @@ function parseChannel(raw: Uint8Array, index: number): Channel | null {
   const scan = (b3 >> 2) & 0x01;
   const pttid = b3 & 0x03;
 
-  const name = readName(raw, index);
+  const name = readName(raw, model, index);
 
   return {
     rxHz,
@@ -83,10 +81,10 @@ function parseChannel(raw: Uint8Array, index: number): Channel | null {
   };
 }
 
-function readName(raw: Uint8Array, index: number): string {
-  const no = nameOffset(index);
+function readName(raw: Uint8Array, model: RadioModel, index: number): string {
+  const no = nameOffset(model, index);
   let out = '';
-  for (let i = 0; i < NAME_LENGTH; i++) {
+  for (let i = 0; i < model.memory.nameLength; i++) {
     const c = raw[no + i];
     if (c === 0xff || c === 0x00) break;
     out += String.fromCharCode(c);

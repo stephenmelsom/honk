@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { parseImage } from '../image/parse.ts';
 import { serializeImage } from '../image/serialize.ts';
 import { emptyImageBuffer } from '../image/synthetic.ts';
-import type { Channel, RadioImage } from '../image/schema.ts';
+import type { Channel, RadioImage, RadioSettings } from '../image/schema.ts';
+import type { RadioModel } from '../radios/types.ts';
+import { DEFAULT_RADIO_ID, RADIOS, detectRadioFromImage, getRadio } from '../radios/index.ts';
 
 export type ConnectionState =
   | { kind: 'idle' }
@@ -11,35 +13,65 @@ export type ConnectionState =
   | { kind: 'error'; message: string };
 
 interface HonkState {
+  radio: RadioModel;
   image: RadioImage;
   selectedChannel: number;
   dirty: boolean;
   connection: ConnectionState;
   imageSource: 'blank' | 'file' | 'radio';
 
+  setRadio: (id: string) => void;
   loadImage: (bytes: Uint8Array, source: 'file' | 'radio') => void;
   newBlankImage: () => void;
   selectChannel: (index: number) => void;
   updateChannel: (index: number, channel: Channel | null) => void;
+  replaceChannels: (channels: (Channel | null)[], selectedChannel?: number) => void;
+  updateSettings: (settings: Partial<RadioSettings>) => void;
   exportImage: () => Uint8Array;
   setConnection: (state: ConnectionState) => void;
 }
 
+const initialRadio = RADIOS[DEFAULT_RADIO_ID];
+
 export const useHonk = create<HonkState>((set, get) => ({
-  image: parseImage(emptyImageBuffer()),
+  radio: initialRadio,
+  image: parseImage(emptyImageBuffer(initialRadio), initialRadio),
   selectedChannel: 0,
   dirty: false,
   connection: { kind: 'idle' },
   imageSource: 'blank',
 
+  setRadio: (id) => {
+    const radio = getRadio(id);
+    if (radio === get().radio) return;
+    // Switching radios discards the current in-memory image — its byte layout
+    // is tied to the previous model and would mis-parse against the new one.
+    if (get().dirty) {
+      const ok = confirm(
+        `Switch to ${radio.label}? Unsaved changes to the current image will be discarded.`,
+      );
+      if (!ok) return;
+    }
+    set({
+      radio,
+      image: parseImage(emptyImageBuffer(radio), radio),
+      dirty: false,
+      imageSource: 'blank',
+      selectedChannel: 0,
+    });
+  },
+
   loadImage: (bytes, source) => {
-    const image = parseImage(bytes);
-    set({ image, dirty: false, imageSource: source, selectedChannel: 0 });
+    const currentRadio = get().radio;
+    const radio = detectRadioFromImage(bytes, currentRadio) ?? currentRadio;
+    const image = parseImage(bytes, radio);
+    set({ radio, image, dirty: false, imageSource: source, selectedChannel: 0 });
   },
 
   newBlankImage: () => {
+    const radio = get().radio;
     set({
-      image: parseImage(emptyImageBuffer()),
+      image: parseImage(emptyImageBuffer(radio), radio),
       dirty: false,
       imageSource: 'blank',
       selectedChannel: 0,
@@ -55,7 +87,27 @@ export const useHonk = create<HonkState>((set, get) => ({
     set({ image: { ...img, channels }, dirty: true });
   },
 
-  exportImage: () => serializeImage(get().image),
+  replaceChannels: (channels, selectedChannel) => {
+    const img = get().image;
+    if (channels.length !== img.channels.length) {
+      throw new Error(`expected ${img.channels.length} channels`);
+    }
+    set({
+      image: { ...img, channels: channels.slice() },
+      selectedChannel: selectedChannel ?? get().selectedChannel,
+      dirty: true,
+    });
+  },
+
+  updateSettings: (settings) => {
+    const img = get().image;
+    set({ image: { ...img, settings: { ...img.settings, ...settings } }, dirty: true });
+  },
+
+  exportImage: () => {
+    const img = get().image;
+    return serializeImage(img, getRadio(img.radioId));
+  },
 
   setConnection: (state) => set({ connection: state }),
 }));

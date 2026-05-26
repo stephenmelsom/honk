@@ -42,7 +42,7 @@ export function CsvImporter() {
           e.target.value = '';
         }}
       />
-      <button onClick={() => inputRef.current?.click()}>Import CSV…</button>
+      <button onClick={() => inputRef.current?.click()}>Import CSV</button>
     </>
   );
 }

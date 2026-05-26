@@ -1,38 +1,39 @@
 // High-level "read the radio" / "write the radio" orchestrators used by the UI.
 
+import type { RadioModel } from '../radios/types.ts';
 import { TimedPort } from './port.ts';
-import { BAUD, UV82_MAGIC, downloadImage, uploadImage } from './protocol.ts';
+import { downloadImage, uploadImage } from './protocol.ts';
 import type { SerialPortLike } from './types.ts';
 import { getNavigatorSerial } from './types.ts';
 
 export type ProgressCb = (fraction: number) => void;
 
 export async function readFromRadio(
+  model: RadioModel,
   progress?: ProgressCb,
   portOverride?: SerialPortLike,
 ): Promise<Uint8Array> {
   const port = portOverride ?? (await requestPort());
   const timed = new TimedPort(port);
-  await timed.open(BAUD);
+  await timed.open(model.serial.baud);
   try {
-    return await downloadImage(timed, UV82_MAGIC, (done, total) =>
-      progress?.(done / total),
-    );
+    return await downloadImage(timed, model, (done, total) => progress?.(done / total));
   } finally {
     await timed.close();
   }
 }
 
 export async function writeToRadio(
+  model: RadioModel,
   image: Uint8Array,
   progress?: ProgressCb,
   portOverride?: SerialPortLike,
 ): Promise<void> {
   const port = portOverride ?? (await requestPort());
   const timed = new TimedPort(port);
-  await timed.open(BAUD);
+  await timed.open(model.serial.baud);
   try {
-    await uploadImage(timed, UV82_MAGIC, image, (done, total) => progress?.(done / total));
+    await uploadImage(timed, model, image, (done, total) => progress?.(done / total));
   } finally {
     await timed.close();
   }

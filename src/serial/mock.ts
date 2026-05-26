@@ -1,9 +1,8 @@
-// In-memory fake port that speaks the UV-82 protocol back to us. Used by
-// tests so we can exercise downloadImage/uploadImage without hardware.
+// In-memory fake port that speaks the UV-82 family protocol back to us. Used
+// by tests so we can exercise downloadImage/uploadImage without hardware.
 
+import type { RadioModel } from '../radios/types.ts';
 import type { SerialPortLike } from './types.ts';
-import { IDENT_HEADER_SIZE, IMAGE_SIZE } from '../image/layout.ts';
-import { UV82_MAGIC } from './protocol.ts';
 
 const ACK = 0x06;
 
@@ -13,13 +12,17 @@ export class FakeRadioPort implements SerialPortLike {
   private state: 'idle' | 'awaitingMagicEnd' | 'awaitingPostMagicAck' | 'idented' = 'idle';
   private magicReceived = 0;
   private opened = false;
+  private readonly model: RadioModel;
 
   readable: ReadableStream<Uint8Array> | null = null;
   writable: WritableStream<Uint8Array> | null = null;
   memory: Uint8Array;
 
-  constructor(memory: Uint8Array) {
-    if (memory.length !== IMAGE_SIZE) throw new Error('memory must be 0x1808 bytes');
+  constructor(model: RadioModel, memory: Uint8Array) {
+    if (memory.length !== model.imageSize) {
+      throw new Error(`memory must be ${model.imageSize} bytes for ${model.label}`);
+    }
+    this.model = model;
     this.memory = memory;
   }
 
@@ -69,13 +72,16 @@ export class FakeRadioPort implements SerialPortLike {
   }
 
   private processBuffer(): void {
+    const magic = this.model.serial.magics[0];
+    const identHeaderSize = this.model.memory.identHeaderSize;
+
     while (this.toRadio.length > 0) {
       if (this.state === 'idle') {
         // Reading magic byte-by-byte.
-        if (this.toRadio[0] === UV82_MAGIC[this.magicReceived]) {
+        if (this.toRadio[0] === magic[this.magicReceived]) {
           this.magicReceived++;
           this.toRadio = this.toRadio.slice(1);
-          if (this.magicReceived === UV82_MAGIC.length) {
+          if (this.magicReceived === magic.length) {
             this.emit([ACK]);
             this.state = 'awaitingMagicEnd';
           }
@@ -84,10 +90,10 @@ export class FakeRadioPort implements SerialPortLike {
           this.magicReceived = 0;
         }
       } else if (this.state === 'awaitingMagicEnd') {
-        // Expecting 0x02 then we respond with 8-byte ident ending in 0xDD.
+        // Expecting 0x02 then we respond with the radio's ident bytes.
         if (this.toRadio[0] === 0x02) {
           this.toRadio = this.toRadio.slice(1);
-          const ident = new Uint8Array([0x50, 0xbb, 0xff, 0x20, 0x13, 0x01, 0x05, 0xdd]);
+          const ident = this.model.expectedIdent;
           // Mirror what a real radio sends back; honk uses this as the ident header.
           this.memory.set(ident, 0); // ensure mock memory ident matches
           this.emit(ident);
@@ -112,8 +118,8 @@ export class FakeRadioPort implements SerialPortLike {
         if (cmd === 'S'.charCodeAt(0)) {
           this.toRadio = this.toRadio.slice(4);
           // Reply: 'X' + addr_be + size + payload. `addr` here is a *radio*
-          // address; we translate to file offset by adding the 8-byte ident.
-          const fileOffset = addr + IDENT_HEADER_SIZE;
+          // address; we translate to file offset by adding the ident header.
+          const fileOffset = addr + identHeaderSize;
           const reply = new Uint8Array(4 + size);
           reply[0] = 'X'.charCodeAt(0);
           reply[1] = (addr >> 8) & 0xff;
@@ -125,7 +131,7 @@ export class FakeRadioPort implements SerialPortLike {
           if (this.toRadio.length < 4 + size) return;
           const payload = this.toRadio.slice(4, 4 + size);
           this.toRadio = this.toRadio.slice(4 + size);
-          this.memory.set(payload, addr + IDENT_HEADER_SIZE);
+          this.memory.set(payload, addr + identHeaderSize);
           this.emit([ACK]);
         } else if (cmd === ACK) {
           // Client ACK after a block read. The real radio responds with its
@@ -142,11 +148,10 @@ export class FakeRadioPort implements SerialPortLike {
   }
 
   /** Re-seed the mock memory's ident header so it matches what the client expects. */
-  static withImage(image: Uint8Array): FakeRadioPort {
+  static withImage(model: RadioModel, image: Uint8Array): FakeRadioPort {
     const mem = new Uint8Array(image);
-    // Ensure the ident header looks right for the UV-82.
-    mem.set([0x50, 0xbb, 0xff, 0x20, 0x13, 0x01, 0x05, 0xdd], 0);
-    return new FakeRadioPort(mem);
+    mem.set(model.expectedIdent, 0);
+    return new FakeRadioPort(model, mem);
   }
 
   /** Reset state so the same instance can be reused for upload after download. */
@@ -157,4 +162,3 @@ export class FakeRadioPort implements SerialPortLike {
     this.toRadio = new Uint8Array(0);
   }
 }
-

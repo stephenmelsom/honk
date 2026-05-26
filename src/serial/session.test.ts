@@ -4,6 +4,7 @@ import { readFromRadio, writeToRadio } from './session.ts';
 import { parseImage } from '../image/parse.ts';
 import { serializeImage } from '../image/serialize.ts';
 import { emptyImageBuffer } from '../image/synthetic.ts';
+import { UV82L } from '../radios/uv82l.ts';
 import { mhzToRaw } from '../codec/lbcd.ts';
 import type { Channel } from '../image/schema.ts';
 
@@ -19,7 +20,7 @@ const blankFlags: Channel['rawFlags'] = {
 describe('serial session against FakeRadioPort', () => {
   it('downloads exactly what the radio holds', async () => {
     // Seed mock memory with a programmed channel.
-    const seed = parseImage(emptyImageBuffer());
+    const seed = parseImage(emptyImageBuffer(UV82L), UV82L);
     seed.channels[0] = {
       rxHz: mhzToRaw(146.84) * 10,
       txHz: mhzToRaw(146.24) * 10,
@@ -32,14 +33,14 @@ describe('serial session against FakeRadioPort', () => {
       busyLockout: false,
       rawFlags: blankFlags,
     };
-    const seeded = serializeImage(seed);
+    const seeded = serializeImage(seed, UV82L);
 
-    const port = FakeRadioPort.withImage(seeded);
-    const downloaded = await readFromRadio(undefined, port);
+    const port = FakeRadioPort.withImage(UV82L, seeded);
+    const downloaded = await readFromRadio(UV82L, undefined, port);
 
     // The mock overwrites the ident header; the rest must match byte-for-byte.
     expect(downloaded.length).toBe(seeded.length);
-    const reparsed = parseImage(downloaded);
+    const reparsed = parseImage(downloaded, UV82L);
     expect(reparsed.channels[0]?.name).toBe('W7TEST');
     expect(reparsed.channels[0]?.rxHz).toBe(146_840_000);
     expect(reparsed.channels[0]?.txTone).toEqual({ kind: 'ctcss', hz: 100.0 });
@@ -50,7 +51,7 @@ describe('serial session against FakeRadioPort', () => {
     // address mapping wrong, the 8-byte shift would put us in the 9-byte
     // padding region of each 16-byte name slot — the visible 7-char name
     // would become garbage.
-    const seed = parseImage(emptyImageBuffer());
+    const seed = parseImage(emptyImageBuffer(UV82L), UV82L);
     const blank = blankFlags;
     seed.channels[0] = {
       rxHz: mhzToRaw(146.52) * 10,
@@ -76,18 +77,18 @@ describe('serial session against FakeRadioPort', () => {
       busyLockout: false,
       rawFlags: blank,
     };
-    const seeded = serializeImage(seed);
-    const port = FakeRadioPort.withImage(seeded);
-    const downloaded = await readFromRadio(undefined, port);
-    const reparsed = parseImage(downloaded);
+    const seeded = serializeImage(seed, UV82L);
+    const port = FakeRadioPort.withImage(UV82L, seeded);
+    const downloaded = await readFromRadio(UV82L, undefined, port);
+    const reparsed = parseImage(downloaded, UV82L);
     expect(reparsed.channels[0]?.name).toBe('CALL');
     expect(reparsed.channels[7]?.name).toBe('TESTING');
   }, 15000);
 
   it('uploads back what we send', async () => {
-    const port = FakeRadioPort.withImage(emptyImageBuffer());
+    const port = FakeRadioPort.withImage(UV82L, emptyImageBuffer(UV82L));
     // Build an image with a different channel and write it.
-    const newImage = parseImage(emptyImageBuffer());
+    const newImage = parseImage(emptyImageBuffer(UV82L), UV82L);
     newImage.channels[5] = {
       rxHz: mhzToRaw(442.5) * 10,
       txHz: mhzToRaw(447.5) * 10,
@@ -100,11 +101,11 @@ describe('serial session against FakeRadioPort', () => {
       busyLockout: false,
       rawFlags: blankFlags,
     };
-    const bytes = serializeImage(newImage);
-    await writeToRadio(bytes, undefined, port);
+    const bytes = serializeImage(newImage, UV82L);
+    await writeToRadio(UV82L, bytes, undefined, port);
 
     // After upload, the fake radio's memory should contain channel 5.
-    const reparsed = parseImage(port.memory);
+    const reparsed = parseImage(port.memory, UV82L);
     expect(reparsed.channels[5]?.name).toBe('UHFTEST');
     expect(reparsed.channels[5]?.txHz).toBe(447_500_000);
   }, 45000);

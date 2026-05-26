@@ -4,6 +4,7 @@
   line-height: 1.4;
   --accent: #2d6cdf;
   --border: #d5d8de;
+  --table-header-tint: rgba(127, 127, 127, 0.1);
   --row-hover: rgba(45, 108, 223, 0.08);
   --row-selected: rgba(45, 108, 223, 0.18);
   --muted: #6a6f78;
@@ -11,6 +12,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --table-header-tint: rgba(127, 127, 127, 0.16);
     --border: #383b42;
     --row-hover: rgba(120, 170, 255, 0.12);
     --row-selected: rgba(120, 170, 255, 0.25);
@@ -52,6 +54,12 @@ body {
 
 .tagline {
   color: var(--muted);
+}
+
+.radio-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .toolbar-row {
@@ -119,6 +127,32 @@ select {
   margin-top: 1rem;
 }
 
+.support-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 2rem auto 0;
+}
+
+.support-buttons a {
+  display: inline-flex;
+  align-items: center;
+}
+
+.bmc-script-button,
+.github-star-button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.bmc-image-button {
+  display: block;
+  width: 217px;
+  height: 60px;
+}
+
 @media (max-width: 900px) {
   .split {
     grid-template-columns: 1fr;
@@ -126,6 +160,7 @@ select {
 }
 
 .channel-table h2,
+.right-column h2,
 .editor h2 {
   margin: 0 0 0.5rem;
   font-size: 1.05rem;
@@ -147,11 +182,13 @@ table {
 thead th {
   position: sticky;
   top: 0;
-  background: rgba(127, 127, 127, 0.1);
+  z-index: 1;
+  background: linear-gradient(var(--table-header-tint), var(--table-header-tint)), Canvas;
   text-align: left;
   padding: 0.35rem 0.5rem;
   font-weight: 600;
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 var(--border);
 }
 
 tbody td {
@@ -184,6 +221,83 @@ tbody tr.empty td {
   gap: 0.5rem;
   max-height: 70vh;
   overflow: auto;
+}
+
+.right-column {
+  min-width: 0;
+}
+
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: 70vh;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  background: Canvas;
+}
+
+.tabs button {
+  width: 100%;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0.55rem 0.75rem 0.45rem;
+  background: transparent;
+}
+
+.tabs button:hover {
+  background: var(--row-hover);
+}
+
+.tabs button.active {
+  background: Canvas;
+  border-bottom-color: var(--accent);
+}
+
+.right-panel .editor {
+  border: 0;
+  border-radius: 0;
+  max-height: none;
+  min-height: 0;
+  flex: 1;
+}
+
+.organizer-editor h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.organizer-section {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.organizer-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.organizer-section p {
+  margin: 0;
+}
+
+.organizer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .editor-header {
@@ -274,6 +388,10 @@ tbody tr.empty td {
 
 .error {
   color: #c0394a;
+}
+
+.warn {
+  color: #a15c00;
 }
 
 .actions {

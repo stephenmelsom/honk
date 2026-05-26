@@ -10,6 +10,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const loadImage = useHonk((s) => s.loadImage);
+  const radio = useHonk((s) => s.radio);
 
   const supported = hasWebSerial();
 
@@ -17,7 +18,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
     setStep('reading');
     setProgress(0);
     try {
-      const bytes = await readFromRadio((f) => setProgress(f));
+      const bytes = await readFromRadio(radio, (f) => setProgress(f));
       loadImage(bytes, 'radio');
       setStep('done');
     } catch (err) {
@@ -48,10 +49,13 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
 
         {supported && step === 'intro' && (
           <>
-            <h2>Read from your radio</h2>
+            <h2>Read from your {radio.label}</h2>
             <p>
               We'll walk through two quick steps to copy your radio's current channels
               into honk. After that you can edit them and write them back.
+            </p>
+            <p className="muted small">
+              Make sure the picker at the top matches your radio model before reading.
             </p>
             <ol className="steps">
               <li>Plug in your programming cable and turn the radio on</li>
@@ -85,7 +89,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
 
         {supported && step === 'reading' && (
           <>
-            <h2>Reading…</h2>
+            <h2>Reading</h2>
             <p>A browser prompt should ask you to choose your cable's serial port.</p>
             <progress value={progress} max={1} />
             <p className="muted small">{Math.round(progress * 100)}%</p>
@@ -127,21 +131,22 @@ export function WriteToRadioButton() {
   const [progress, setProgress] = useState(0);
   const exportImage = useHonk((s) => s.exportImage);
   const imageSource = useHonk((s) => s.imageSource);
+  const radio = useHonk((s) => s.radio);
 
   if (!supported) return null;
 
   const onWrite = async () => {
     if (imageSource !== 'radio') {
       const ok = confirm(
-        "You haven't read from this radio yet. Writing without reading first could overwrite settings unique to your radio. Continue anyway?",
+        `You haven't read from this ${radio.label} yet. Writing without reading first could overwrite settings unique to your radio. Continue anyway?`,
       );
       if (!ok) return;
     }
-    if (!confirm('Write all channels and settings to the radio?')) return;
+    if (!confirm(`Write all channels and settings to the ${radio.label}?`)) return;
     setBusy(true);
     setProgress(0);
     try {
-      await writeToRadio(exportImage(), (f) => setProgress(f));
+      await writeToRadio(radio, exportImage(), (f) => setProgress(f));
       alert('Done. Power-cycle the radio to use the new channels.');
     } catch (err) {
       alert(`Write failed: ${(err as Error).message}`);
@@ -152,7 +157,7 @@ export function WriteToRadioButton() {
 
   return (
     <button onClick={() => void onWrite()} disabled={busy}>
-      {busy ? `Writing… ${Math.round(progress * 100)}%` : 'Write to radio'}
+      {busy ? `Writing ${Math.round(progress * 100)}%` : 'Write to radio'}
     </button>
   );
 }

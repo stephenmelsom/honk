@@ -38,7 +38,7 @@ export function ImportExport() {
           e.target.value = '';
         }}
       />
-      <button onClick={() => inputRef.current?.click()}>Open .img…</button>
+      <button onClick={() => inputRef.current?.click()}>Open .img</button>
       <button onClick={onExport}>Save .img</button>
       <button onClick={() => newBlankImage()}>New blank</button>
       <span className="status">

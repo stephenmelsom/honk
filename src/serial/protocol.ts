@@ -1,7 +1,10 @@
 // UV-82 clone-mode protocol implementation, ported from chirp/drivers/uv5r.py.
+// Per-model details (magic bytes, image size, write ranges) come from a
+// RadioModel; the framing protocol itself is shared across the UV-5R/UV-82
+// family.
 //
 // Handshake:
-//   1. Slowly send a 7-byte "magic" (one byte every 10 ms).
+//   1. Slowly send the per-radio "magic" bytes (one byte every 10 ms).
 //   2. Read 1 byte ACK; must be 0x06.
 //   3. Send 0x02.
 //   4. Read bytes one at a time until 0xDD; expect total length 8 or 12.
@@ -17,28 +20,14 @@
 //   send: 'X' + uint16_be(addr) + uint8(len) + payload
 //   recv: 0x06 ACK.
 //
-// Address mapping: the radio addresses its own memory from 0x0000 to 0x17FF
-// (0x1800 bytes). The saved image file prepends the 8-byte clone-ident header,
-// so radio address X maps to file offset X + 8. CHIRP reads in 0x40-byte
-// blocks but writes in 0x10-byte blocks, and skips two factory-locked windows
-// during writes.
+// Address mapping: the radio addresses its own memory from 0x0000 onward.
+// The saved image file prepends the model's ident header, so radio address
+// X maps to file offset X + identHeaderSize. CHIRP reads in readBlockSize-byte
+// blocks but writes in writeBlockSize-byte blocks, and skips factory-locked
+// windows during writes.
 
+import type { RadioModel } from '../radios/types.ts';
 import type { TimedPort } from './port.ts';
-import { IMAGE_SIZE, IDENT_HEADER_SIZE } from '../image/layout.ts';
-
-export const UV82_MAGIC = new Uint8Array([0x50, 0xbb, 0xff, 0x20, 0x13, 0x01, 0x05]);
-export const BAUD = 9600;
-export const READ_BLOCK_SIZE = 0x40;
-export const WRITE_BLOCK_SIZE = 0x10;
-export const RADIO_MAIN_SIZE = 0x1800; // 0x0000..0x17FF on the radio side
-
-// File-offset ranges that get written to the radio. Anything outside these is
-// left untouched on the radio. Matches CHIRP's _ranges_main_default for UV-5R.
-const WRITE_RANGES_FILE: ReadonlyArray<readonly [number, number]> = [
-  [0x0008, 0x0cf8],
-  [0x0d08, 0x0df8],
-  [0x0e08, 0x1808],
-];
 
 const ACK = 0x06;
 
@@ -78,6 +67,18 @@ async function doIdent(port: TimedPort, magic: Uint8Array): Promise<Uint8Array> 
   const ack2 = await port.readExact(1, 2000);
   if (ack2[0] !== ACK) throw new Error('Radio refused clone (no second ACK)');
   return ident;
+}
+
+async function identifyRadio(port: TimedPort, magics: readonly Uint8Array[]): Promise<Uint8Array> {
+  let lastError: unknown;
+  for (const magic of magics) {
+    try {
+      return await doIdent(port, magic);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Radio did not match any known clone ident');
 }
 
 function packReadCmd(addr: number, size: number): Uint8Array {
@@ -136,23 +137,26 @@ export interface SerialProgress {
 
 export async function downloadImage(
   port: TimedPort,
-  magic: Uint8Array,
+  model: RadioModel,
   progress?: SerialProgress,
 ): Promise<Uint8Array> {
-  const ident = await doIdent(port, magic);
-  const img = new Uint8Array(IMAGE_SIZE);
-  img.set(ident.subarray(0, IDENT_HEADER_SIZE), 0);
+  const { magics, radioMainSize, readBlockSize } = model.serial;
+  const identHeaderSize = model.memory.identHeaderSize;
 
-  // Request radio addresses 0x0000..0x17FF in 0x40-byte chunks; data lands
-  // in the file at offset addr + 8.
-  const total = RADIO_MAIN_SIZE;
+  const ident = await identifyRadio(port, magics);
+  const img = new Uint8Array(model.imageSize);
+  img.set(ident.subarray(0, identHeaderSize), 0);
+
+  // Request radio addresses 0x0000..radioMainSize in readBlockSize-byte chunks;
+  // data lands in the file at offset addr + identHeaderSize.
+  const total = radioMainSize;
   let done = 0;
   let isFirst = true;
-  for (let radioAddr = 0; radioAddr < RADIO_MAIN_SIZE; radioAddr += READ_BLOCK_SIZE) {
-    const block = await readBlock(port, radioAddr, READ_BLOCK_SIZE, isFirst);
-    img.set(block, radioAddr + IDENT_HEADER_SIZE);
+  for (let radioAddr = 0; radioAddr < radioMainSize; radioAddr += readBlockSize) {
+    const block = await readBlock(port, radioAddr, readBlockSize, isFirst);
+    img.set(block, radioAddr + identHeaderSize);
     isFirst = false;
-    done += READ_BLOCK_SIZE;
+    done += readBlockSize;
     progress?.(done, total);
   }
   return img;
@@ -160,24 +164,29 @@ export async function downloadImage(
 
 export async function uploadImage(
   port: TimedPort,
-  magic: Uint8Array,
+  model: RadioModel,
   image: Uint8Array,
   progress?: SerialProgress,
 ): Promise<void> {
-  if (image.length !== IMAGE_SIZE) throw new Error(`image must be ${IMAGE_SIZE} bytes`);
-  await doIdent(port, magic);
+  if (image.length !== model.imageSize) {
+    throw new Error(`image must be ${model.imageSize} bytes`);
+  }
+  const { magics, writeBlockSize, writeRangesFile } = model.serial;
+  const identHeaderSize = model.memory.identHeaderSize;
+
+  await identifyRadio(port, magics);
 
   // Total bytes we're going to write, for the progress meter.
   let totalToWrite = 0;
-  for (const [s, e] of WRITE_RANGES_FILE) totalToWrite += e - s;
+  for (const [s, e] of writeRangesFile) totalToWrite += e - s;
   let done = 0;
 
-  for (const [fileStart, fileEnd] of WRITE_RANGES_FILE) {
-    for (let fileAddr = fileStart; fileAddr < fileEnd; fileAddr += WRITE_BLOCK_SIZE) {
-      const radioAddr = fileAddr - IDENT_HEADER_SIZE;
-      const slice = image.slice(fileAddr, fileAddr + WRITE_BLOCK_SIZE);
+  for (const [fileStart, fileEnd] of writeRangesFile) {
+    for (let fileAddr = fileStart; fileAddr < fileEnd; fileAddr += writeBlockSize) {
+      const radioAddr = fileAddr - identHeaderSize;
+      const slice = image.slice(fileAddr, fileAddr + writeBlockSize);
       await writeBlock(port, radioAddr, slice);
-      done += WRITE_BLOCK_SIZE;
+      done += writeBlockSize;
       progress?.(done, totalToWrite);
     }
   }

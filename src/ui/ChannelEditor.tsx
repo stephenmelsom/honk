@@ -4,6 +4,8 @@ import type { Channel } from '../image/schema.ts';
 import { CTCSS_TONES_HZ, DCS_CODES } from '../codec/tones.ts';
 import type { ToneSlot } from '../codec/tones.ts';
 import { formatMhz, parseMhz } from '../radio/format.ts';
+import type { RadioModel } from '../radios/types.ts';
+import { isFreqInBands } from '../radios/util.ts';
 
 const blankFlags: Channel['rawFlags'] = {
   flagsByte0Other: 0,
@@ -14,10 +16,10 @@ const blankFlags: Channel['rawFlags'] = {
   flagsByte3PttId: 0,
 };
 
-function emptyChannel(): Channel {
+function emptyChannel(model: RadioModel): Channel {
   return {
-    rxHz: 146_520_000,
-    txHz: 146_520_000,
+    rxHz: model.defaultRxHz,
+    txHz: model.defaultRxHz,
     rxTone: { kind: 'none' },
     txTone: { kind: 'none' },
     name: '',
@@ -33,6 +35,7 @@ export function ChannelEditor() {
   const index = useHonk((s) => s.selectedChannel);
   const channel = useHonk((s) => s.image.channels[index]);
   const updateChannel = useHonk((s) => s.updateChannel);
+  const radio = useHonk((s) => s.radio);
 
   if (!channel) {
     return (
@@ -41,12 +44,15 @@ export function ChannelEditor() {
         <p>
           <em>This slot is empty.</em>
         </p>
-        <button onClick={() => updateChannel(index, emptyChannel())}>
+        <button onClick={() => updateChannel(index, emptyChannel(radio))}>
           Add a channel here
         </button>
       </aside>
     );
   }
+
+  const rxOutOfBand = !isFreqInBands(channel.rxHz, radio);
+  const txOutOfBand = !isFreqInBands(channel.txHz, radio);
 
   const patch = (next: Partial<Channel>) =>
     updateChannel(index, { ...channel, ...next });
@@ -82,6 +88,7 @@ export function ChannelEditor() {
             else e.target.value = formatMhz(channel.rxHz);
           }}
         />
+        {rxOutOfBand && <BandWarning model={radio} />}
       </Field>
 
       <Field
@@ -99,6 +106,7 @@ export function ChannelEditor() {
             else e.target.value = formatMhz(channel.txHz);
           }}
         />
+        {txOutOfBand && channel.txHz !== -1 && <BandWarning model={radio} />}
       </Field>
 
       <Field
@@ -151,6 +159,19 @@ export function ChannelEditor() {
         />
       </Field>
     </aside>
+  );
+}
+
+function BandWarning({ model }: { model: RadioModel }) {
+  const bands: string[] = [];
+  const { vhf, uhf } = model.frequencyLimits;
+  if (vhf) bands.push(`${(vhf[0] / 1e6).toFixed(0)}–${(vhf[1] / 1e6).toFixed(0)} MHz`);
+  if (uhf) bands.push(`${(uhf[0] / 1e6).toFixed(0)}–${(uhf[1] / 1e6).toFixed(0)} MHz`);
+  return (
+    <span className="warn small">
+      Outside {model.label} bands ({bands.join(', ')}). Saved anyway, but the radio
+      may not accept it.
+    </span>
   );
 }
 
