@@ -5,6 +5,7 @@ import { emptyImageBuffer } from '../image/synthetic.ts';
 import type { Channel, RadioImage, RadioSettings } from '../image/schema.ts';
 import type { RadioModel } from '../radios/types.ts';
 import { DEFAULT_RADIO_ID, RADIOS, detectRadioFromImage, getRadio } from '../radios/index.ts';
+import type { SettingsProfile } from '../settingsProfiles/types.ts';
 
 export type ConnectionState =
   | { kind: 'idle' }
@@ -27,6 +28,7 @@ interface HonkState {
   updateChannel: (index: number, channel: Channel | null) => void;
   replaceChannels: (channels: (Channel | null)[], selectedChannel?: number) => void;
   updateSettings: (settings: Partial<RadioSettings>) => void;
+  applySettingsProfile: (profile: SettingsProfile) => void;
   exportImage: () => Uint8Array;
   setConnection: (state: ConnectionState) => void;
 }
@@ -102,6 +104,11 @@ export const useHonk = create<HonkState>((set, get) => ({
   updateSettings: (settings) => {
     const img = get().image;
     set({ image: { ...img, settings: { ...img.settings, ...settings } }, dirty: true });
+  },
+
+  applySettingsProfile: (profile) => {
+    const img = get().image;
+    set({ image: { ...img, settings: { ...profile.settings } }, dirty: true });
   },
 
   exportImage: () => {

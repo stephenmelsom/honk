@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useHonk } from '../state/store.ts';
 import type {
   AlarmMode,
@@ -17,6 +18,13 @@ import {
   TUNING_STEPS_KHZ,
   VOICE_VALUES,
 } from '../image/settings.ts';
+import {
+  createCustomSettingsProfile,
+  loadCustomSettingsProfiles,
+  saveCustomSettingsProfiles,
+} from '../settingsProfiles/storage.ts';
+import { BUILTIN_SETTINGS_PROFILES } from '../settingsProfiles/types.ts';
+import type { SettingsProfile } from '../settingsProfiles/types.ts';
 import { Field } from './Field.tsx';
 
 const VOX_VALUES = Array.from({ length: 11 }, (_, value) => value);
@@ -30,10 +38,79 @@ const TIMEOUT_VALUES: readonly (number | null)[] = [
 export function SettingsEditor() {
   const settings = useHonk((s) => s.image.settings);
   const updateSettings = useHonk((s) => s.updateSettings);
+  const applySettingsProfile = useHonk((s) => s.applySettingsProfile);
+  const [customProfiles, setCustomProfiles] = useState<SettingsProfile[]>(() =>
+    loadCustomSettingsProfiles(),
+  );
+  const [profileName, setProfileName] = useState('');
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const applyProfile = (profile: SettingsProfile) => {
+    applySettingsProfile(profile);
+    setProfileError(null);
+  };
+
+  const saveProfile = () => {
+    const name = profileName.trim();
+    if (!name) {
+      setProfileError('Enter a profile name first.');
+      return;
+    }
+
+    const profile = createCustomSettingsProfile(name, settings);
+    const next = [...customProfiles, profile];
+    try {
+      saveCustomSettingsProfiles(next);
+      setCustomProfiles(next);
+      setProfileName('');
+      setProfileError(null);
+    } catch (err) {
+      setProfileError(`Could not save profile: ${(err as Error).message}`);
+    }
+  };
+
+  const deleteProfile = (id: string) => {
+    const next = customProfiles.filter((profile) => profile.id !== id);
+    try {
+      saveCustomSettingsProfiles(next);
+      setCustomProfiles(next);
+      setProfileError(null);
+    } catch (err) {
+      setProfileError(`Could not delete profile: ${(err as Error).message}`);
+    }
+  };
 
   return (
     <aside className="editor">
       <h2>Radio settings</h2>
+      <section className="settings-profiles">
+        <div className="editor-header">
+          <h3>Profiles</h3>
+        </div>
+        <ProfileList profiles={BUILTIN_SETTINGS_PROFILES} onApply={applyProfile} />
+        {customProfiles.length > 0 && (
+          <>
+            <h4>Custom</h4>
+            <ProfileList
+              profiles={customProfiles}
+              onApply={applyProfile}
+              onDelete={deleteProfile}
+            />
+          </>
+        )}
+        <div className="profile-save">
+          <input
+            type="text"
+            value={profileName}
+            placeholder="Profile name"
+            onChange={(e) => setProfileName(e.target.value)}
+          />
+          <button type="button" onClick={saveProfile}>
+            Save current
+          </button>
+        </div>
+        {profileError && <p className="error small">{profileError}</p>}
+      </section>
 
       <Field label="Squelch" hint="Higher values require stronger signals to open the speaker.">
         <select
@@ -227,6 +304,39 @@ export function SettingsEditor() {
         />
       </Field>
     </aside>
+  );
+}
+
+function ProfileList({
+  profiles,
+  onApply,
+  onDelete,
+}: {
+  profiles: readonly SettingsProfile[];
+  onApply: (profile: SettingsProfile) => void;
+  onDelete?: (id: string) => void;
+}) {
+  return (
+    <ul className="settings-profile-list">
+      {profiles.map((profile) => (
+        <li key={profile.id}>
+          <div>
+            <strong>{profile.name}</strong>
+            {profile.description && <div className="muted small">{profile.description}</div>}
+          </div>
+          <div className="profile-actions">
+            <button type="button" onClick={() => onApply(profile)}>
+              Apply
+            </button>
+            {onDelete && (
+              <button type="button" onClick={() => onDelete(profile.id)}>
+                Delete
+              </button>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
