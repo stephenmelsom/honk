@@ -1,0 +1,15 @@
+{
+  "id": "ham-2m",
+  "name": "Ham 2m simplex",
+  "description": "Common 2m (VHF) simplex calling and chat frequencies. Requires a Technician class amateur license to transmit.",
+  "regulatory": "ham",
+  "channels": [
+    { "name": "2M CALL", "rxMhz": 146.520 },
+    { "name": "2M-1",    "rxMhz": 146.400 },
+    { "name": "2M-2",    "rxMhz": 146.460 },
+    { "name": "2M-3",    "rxMhz": 146.560 },
+    { "name": "2M-4",    "rxMhz": 147.420 },
+    { "name": "2M-5",    "rxMhz": 147.480 },
+    { "name": "2M-6",    "rxMhz": 147.540 }
+  ]
+}

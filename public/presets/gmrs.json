@@ -1,0 +1,31 @@
+{
+  "id": "gmrs",
+  "name": "GMRS",
+  "description": "US GMRS simplex channels. Requires a GMRS license. Channels 15-22 are also used as repeater outputs (input = +5 MHz).",
+  "regulatory": "GMRS",
+  "channels": [
+    { "name": "GMRS-1",  "rxMhz": 462.5625, "bandwidth": "narrow" },
+    { "name": "GMRS-2",  "rxMhz": 462.5875, "bandwidth": "narrow" },
+    { "name": "GMRS-3",  "rxMhz": 462.6125, "bandwidth": "narrow" },
+    { "name": "GMRS-4",  "rxMhz": 462.6375, "bandwidth": "narrow" },
+    { "name": "GMRS-5",  "rxMhz": 462.6625, "bandwidth": "narrow" },
+    { "name": "GMRS-6",  "rxMhz": 462.6875, "bandwidth": "narrow" },
+    { "name": "GMRS-7",  "rxMhz": 462.7125, "bandwidth": "narrow" },
+    { "name": "GMRS-15", "rxMhz": 462.5500 },
+    { "name": "GMRS-16", "rxMhz": 462.5750 },
+    { "name": "GMRS-17", "rxMhz": 462.6000 },
+    { "name": "GMRS-18", "rxMhz": 462.6250 },
+    { "name": "GMRS-19", "rxMhz": 462.6500 },
+    { "name": "GMRS-20", "rxMhz": 462.6750 },
+    { "name": "GMRS-21", "rxMhz": 462.7000 },
+    { "name": "GMRS-22", "rxMhz": 462.7250 },
+    { "name": "GMRS-RP15", "rxMhz": 462.5500, "txMhz": 467.5500 },
+    { "name": "GMRS-RP16", "rxMhz": 462.5750, "txMhz": 467.5750 },
+    { "name": "GMRS-RP17", "rxMhz": 462.6000, "txMhz": 467.6000 },
+    { "name": "GMRS-RP18", "rxMhz": 462.6250, "txMhz": 467.6250 },
+    { "name": "GMRS-RP19", "rxMhz": 462.6500, "txMhz": 467.6500 },
+    { "name": "GMRS-RP20", "rxMhz": 462.6750, "txMhz": 467.6750 },
+    { "name": "GMRS-RP21", "rxMhz": 462.7000, "txMhz": 467.7000 },
+    { "name": "GMRS-RP22", "rxMhz": 462.7250, "txMhz": 467.7250 }
+  ]
+}

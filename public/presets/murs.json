@@ -1,0 +1,13 @@
+{
+  "id": "murs",
+  "name": "MURS",
+  "description": "US MURS channels — license-free VHF business band. Channels 4 and 5 use wider FM.",
+  "regulatory": "MURS",
+  "channels": [
+    { "name": "MURS-1", "rxMhz": 151.820, "bandwidth": "narrow", "locked": true },
+    { "name": "MURS-2", "rxMhz": 151.880, "bandwidth": "narrow", "locked": true },
+    { "name": "MURS-3", "rxMhz": 151.940, "bandwidth": "narrow", "locked": true },
+    { "name": "MURS-4", "rxMhz": 154.570, "bandwidth": "wide" },
+    { "name": "MURS-5", "rxMhz": 154.600, "bandwidth": "wide" }
+  ]
+}

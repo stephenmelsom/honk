@@ -1,0 +1,15 @@
+{
+  "id": "noaa",
+  "name": "NOAA Weather",
+  "description": "Seven NOAA weather radio frequencies. Receive-only — these are not legal to transmit on.",
+  "regulatory": "NOAA",
+  "channels": [
+    { "name": "WX-1",  "rxMhz": 162.400, "bandwidth": "narrow", "locked": true },
+    { "name": "WX-2",  "rxMhz": 162.425, "bandwidth": "narrow", "locked": true },
+    { "name": "WX-3",  "rxMhz": 162.450, "bandwidth": "narrow", "locked": true },
+    { "name": "WX-4",  "rxMhz": 162.475, "bandwidth": "narrow", "locked": true },
+    { "name": "WX-5",  "rxMhz": 162.500, "bandwidth": "narrow", "locked": true },
+    { "name": "WX-6",  "rxMhz": 162.525, "bandwidth": "narrow", "locked": true },
+    { "name": "WX-7",  "rxMhz": 162.550, "bandwidth": "narrow", "locked": true }
+  ]
+}

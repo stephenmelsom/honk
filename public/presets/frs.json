@@ -1,0 +1,30 @@
+{
+  "id": "frs",
+  "name": "FRS (Family Radio Service)",
+  "description": "US FRS channels 1-22. License-free for any private use. Narrow FM, low power, no external antenna.",
+  "regulatory": "FRS",
+  "channels": [
+    { "name": "FRS-1",  "rxMhz": 462.5625, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-2",  "rxMhz": 462.5875, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-3",  "rxMhz": 462.6125, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-4",  "rxMhz": 462.6375, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-5",  "rxMhz": 462.6625, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-6",  "rxMhz": 462.6875, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-7",  "rxMhz": 462.7125, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-8",  "rxMhz": 467.5625, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-9",  "rxMhz": 467.5875, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-10", "rxMhz": 467.6125, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-11", "rxMhz": 467.6375, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-12", "rxMhz": 467.6625, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-13", "rxMhz": 467.6875, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-14", "rxMhz": 467.7125, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-15", "rxMhz": 462.5500, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-16", "rxMhz": 462.5750, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-17", "rxMhz": 462.6000, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-18", "rxMhz": 462.6250, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-19", "rxMhz": 462.6500, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-20", "rxMhz": 462.6750, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-21", "rxMhz": 462.7000, "bandwidth": "narrow", "power": "low", "locked": true },
+    { "name": "FRS-22", "rxMhz": 462.7250, "bandwidth": "narrow", "power": "low", "locked": true }
+  ]
+}
