@@ -140,6 +140,7 @@ export async function downloadImage(
   model: RadioModel,
   progress?: SerialProgress,
 ): Promise<Uint8Array> {
+  if (!model.serial) throw new Error(`${model.label} does not support direct serial cloning yet`);
   const { magics, radioMainSize, readBlockSize } = model.serial;
   const identHeaderSize = model.memory.identHeaderSize;
 
@@ -168,6 +169,7 @@ export async function uploadImage(
   image: Uint8Array,
   progress?: SerialProgress,
 ): Promise<void> {
+  if (!model.serial) throw new Error(`${model.label} does not support direct serial cloning yet`);
   if (image.length !== model.imageSize) {
     throw new Error(`image must be ${model.imageSize} bytes`);
   }

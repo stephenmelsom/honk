@@ -4,8 +4,12 @@ import type { RadioModel } from '../radios/types.ts';
 import { channelOffset, nameOffset } from '../radios/util.ts';
 import type { Channel, RadioImage } from './schema.ts';
 import { writeSettings } from './settings.ts';
+import { serializeYaesuFtmImage } from './yaesuFtm.ts';
 
 export function serializeImage(img: RadioImage, model: RadioModel): Uint8Array {
+  if (model.imageCodec === 'yaesu-ftm') {
+    return serializeYaesuFtmImage(img, model);
+  }
   if (img.raw.length !== model.imageSize) {
     throw new Error(`raw buffer must be ${model.imageSize} bytes`);
   }

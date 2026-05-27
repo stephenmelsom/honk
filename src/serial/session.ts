@@ -13,6 +13,7 @@ export async function readFromRadio(
   progress?: ProgressCb,
   portOverride?: SerialPortLike,
 ): Promise<Uint8Array> {
+  if (!model.serial) throw new Error(`${model.label} does not support direct serial cloning yet`);
   const port = portOverride ?? (await requestPort());
   const timed = new TimedPort(port);
   await timed.open(model.serial.baud);
@@ -29,6 +30,7 @@ export async function writeToRadio(
   progress?: ProgressCb,
   portOverride?: SerialPortLike,
 ): Promise<void> {
+  if (!model.serial) throw new Error(`${model.label} does not support direct serial cloning yet`);
   const port = portOverride ?? (await requestPort());
   const timed = new TimedPort(port);
   await timed.open(model.serial.baud);

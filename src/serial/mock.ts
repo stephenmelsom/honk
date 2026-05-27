@@ -72,6 +72,7 @@ export class FakeRadioPort implements SerialPortLike {
   }
 
   private processBuffer(): void {
+    if (!this.model.serial) throw new Error(`${this.model.label} does not support serial mocking`);
     const magic = this.model.serial.magics[0];
     const identHeaderSize = this.model.memory.identHeaderSize;
 

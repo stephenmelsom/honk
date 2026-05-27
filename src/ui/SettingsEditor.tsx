@@ -44,6 +44,14 @@ export function SettingsEditor() {
   );
   const [profileName, setProfileName] = useState('');
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState(
+    BUILTIN_SETTINGS_PROFILES[0]?.id ?? '',
+  );
+  const allProfiles = [...BUILTIN_SETTINGS_PROFILES, ...customProfiles];
+  const selectedProfile = allProfiles.find((profile) => profile.id === selectedProfileId);
+  const selectedCustomProfile = customProfiles.find(
+    (profile) => profile.id === selectedProfileId,
+  );
 
   const applyProfile = (profile: SettingsProfile) => {
     applySettingsProfile(profile);
@@ -74,6 +82,9 @@ export function SettingsEditor() {
     try {
       saveCustomSettingsProfiles(next);
       setCustomProfiles(next);
+      if (selectedProfileId === id) {
+        setSelectedProfileId(BUILTIN_SETTINGS_PROFILES[0]?.id ?? next[0]?.id ?? '');
+      }
       setProfileError(null);
     } catch (err) {
       setProfileError(`Could not delete profile: ${(err as Error).message}`);
@@ -87,16 +98,44 @@ export function SettingsEditor() {
         <div className="editor-header">
           <h3>Profiles</h3>
         </div>
-        <ProfileList profiles={BUILTIN_SETTINGS_PROFILES} onApply={applyProfile} />
-        {customProfiles.length > 0 && (
-          <>
-            <h4>Custom</h4>
-            <ProfileList
-              profiles={customProfiles}
-              onApply={applyProfile}
-              onDelete={deleteProfile}
-            />
-          </>
+        <div className="profile-picker">
+          <select
+            value={selectedProfileId}
+            onChange={(e) => setSelectedProfileId(e.target.value)}
+            aria-label="Settings profile"
+          >
+            <optgroup label="Built-in">
+              {BUILTIN_SETTINGS_PROFILES.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name}
+                </option>
+              ))}
+            </optgroup>
+            {customProfiles.length > 0 && (
+              <optgroup label="Custom">
+                {customProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          <button
+            type="button"
+            onClick={() => selectedProfile && applyProfile(selectedProfile)}
+            disabled={!selectedProfile}
+          >
+            Apply
+          </button>
+          {selectedCustomProfile && (
+            <button type="button" onClick={() => deleteProfile(selectedCustomProfile.id)}>
+              Delete
+            </button>
+          )}
+        </div>
+        {selectedProfile?.description && (
+          <p className="muted small">{selectedProfile.description}</p>
         )}
         <div className="profile-save">
           <input
@@ -304,39 +343,6 @@ export function SettingsEditor() {
         />
       </Field>
     </aside>
-  );
-}
-
-function ProfileList({
-  profiles,
-  onApply,
-  onDelete,
-}: {
-  profiles: readonly SettingsProfile[];
-  onApply: (profile: SettingsProfile) => void;
-  onDelete?: (id: string) => void;
-}) {
-  return (
-    <ul className="settings-profile-list">
-      {profiles.map((profile) => (
-        <li key={profile.id}>
-          <div>
-            <strong>{profile.name}</strong>
-            {profile.description && <div className="muted small">{profile.description}</div>}
-          </div>
-          <div className="profile-actions">
-            <button type="button" onClick={() => onApply(profile)}>
-              Apply
-            </button>
-            {onDelete && (
-              <button type="button" onClick={() => onDelete(profile.id)}>
-                Delete
-              </button>
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
   );
 }
 

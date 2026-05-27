@@ -3,16 +3,21 @@ import { ChannelTable } from './ui/ChannelTable.tsx';
 import { ChannelEditor } from './ui/ChannelEditor.tsx';
 import { ChannelOrganizer } from './ui/ChannelOrganizer.tsx';
 import { SettingsEditor } from './ui/SettingsEditor.tsx';
-import { ImportExport } from './ui/ImportExport.tsx';
+import { NewBlankButton, OpenImageButton, SaveImageButton } from './ui/ImportExport.tsx';
 import { CsvImporter } from './ui/CsvImporter.tsx';
 import { RepeaterWizard } from './ui/RepeaterWizard.tsx';
 import { PresetPicker } from './ui/PresetPicker.tsx';
 import { ConnectWizard, WriteToRadioButton } from './ui/ConnectWizard.tsx';
 import { RadioPicker } from './ui/RadioPicker.tsx';
 import { hasWebSerial } from './serial/capability.ts';
+import { useHonk } from './state/store.ts';
+import { duplexDescription, formatMhz, formatTone } from './radio/format.ts';
+import { isFreqInBands } from './radios/util.ts';
+import type { RadioModel } from './radios/types.ts';
+import type { Channel } from './image/schema.ts';
 
-type Modal = 'none' | 'repeater' | 'presets' | 'connect';
-type EditorTab = 'channels' | 'organize' | 'settings';
+type Modal = 'none' | 'repeater' | 'presets' | 'connect' | 'organize';
+type InspectorTab = 'channel' | 'settings';
 
 declare global {
   interface Window {
@@ -117,87 +122,234 @@ function SupportButtons() {
 
 export function App() {
   const [modal, setModal] = useState<Modal>('none');
-  const [editorTab, setEditorTab] = useState<EditorTab>('channels');
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>('channel');
+  const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
   const supportsSerial = hasWebSerial();
+  const radio = useHonk((s) => s.radio);
+  const supportsDirectClone = supportsSerial && !!radio.serial;
+  const channels = useHonk((s) => s.image.channels);
+  const selected = useHonk((s) => s.selectedChannel);
+  const selectedChannel = channels[selected] ?? null;
+  const dirty = useHonk((s) => s.dirty);
+  const imageSource = useHonk((s) => s.imageSource);
+  const programmedCount = channels.filter((channel) => channel !== null).length;
+  const warnings = buildReviewWarnings(channels, radio);
+  const sourceLabel =
+    imageSource === 'blank'
+      ? 'New blank image'
+      : imageSource === 'file'
+        ? 'Opened from image file'
+        : 'Read from radio';
 
   return (
     <div className="app">
       <header className="topbar">
-        <h1>
-          <span className="logo">🪿</span> honk
-        </h1>
+        <div>
+          <h1>
+            <span className="logo">🪿</span> honk
+          </h1>
+          <p className="tagline">Radio image editor for programmable handhelds</p>
+        </div>
         <RadioPicker />
       </header>
 
-      <section className="toolbar-row">
-        <ImportExport />
-        <div className="toolbar">
-          {supportsSerial && (
-            <>
-              <button onClick={() => setModal('connect')}>Read from radio</button>
-              <WriteToRadioButton />
-            </>
-          )}
-          <button onClick={() => setModal('repeater')}>+ Repeater</button>
-          <button onClick={() => setModal('presets')}>+ Channel pack</button>
-          <CsvImporter />
+      <section className="source-panel" aria-label="Source">
+        <div className="source-copy">
+          <span className="section-kicker">Source</span>
+          <h2>{sourceLabel}</h2>
+          <p>
+            {radio.label} · {programmedCount} of {channels.length} channels programmed
+            {dirty ? ' · unsaved changes' : ''}
+          </p>
         </div>
       </section>
 
       {!supportsSerial && (
         <p className="banner">
           This browser doesn't support direct radio connections. You can still open and
-          save <code>.img</code> files exported from CHIRP — try Chrome or Edge to talk
+          save radio image files exported from CHIRP or ADMS — try Chrome or Edge to talk
           to your radio over USB.
         </p>
       )}
 
-      <div className="split">
-        <ChannelTable />
-        <section className="right-column">
-          <h2>Edit</h2>
+      <main className="workspace">
+        <section className="channel-workspace">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">Channels</span>
+              <h2>Memory slots</h2>
+            </div>
+            <div className="toolbar channel-actions">
+              <div className="source-menu-wrap">
+                <button onClick={() => setSourceMenuOpen((open) => !open)}>
+                  Source
+                </button>
+                {sourceMenuOpen && (
+                  <div className="source-menu">
+                    {supportsDirectClone && (
+                      <button
+                        onClick={() => {
+                          setSourceMenuOpen(false);
+                          setModal('connect');
+                        }}
+                      >
+                        Read from radio
+                      </button>
+                    )}
+                    <OpenImageButton />
+                    <NewBlankButton />
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setModal('repeater')}>
+                Add repeater
+              </button>
+              <button onClick={() => setModal('presets')}>Add channel pack</button>
+              <CsvImporter />
+              <button onClick={() => setModal('organize')}>Organize</button>
+            </div>
+          </div>
+          <ChannelTable />
+        </section>
+
+        <aside className="inspector-column" aria-label="Inspector">
+          <SelectedChannelSummary channel={selectedChannel} index={selected} />
           <div className="right-panel">
-            <div className="tabs" role="tablist" aria-label="Editor">
+            <div className="tabs" role="tablist" aria-label="Inspector">
               <button
                 type="button"
                 role="tab"
-                aria-selected={editorTab === 'channels'}
-                className={editorTab === 'channels' ? 'active' : ''}
-                onClick={() => setEditorTab('channels')}
+                aria-selected={inspectorTab === 'channel'}
+                className={inspectorTab === 'channel' ? 'active' : ''}
+                onClick={() => setInspectorTab('channel')}
               >
-                Channels
+                Channel
               </button>
               <button
                 type="button"
                 role="tab"
-                aria-selected={editorTab === 'organize'}
-                className={editorTab === 'organize' ? 'active' : ''}
-                onClick={() => setEditorTab('organize')}
+                aria-selected={inspectorTab === 'settings'}
+                className={inspectorTab === 'settings' ? 'active' : ''}
+                onClick={() => setInspectorTab('settings')}
               >
-                Organize
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={editorTab === 'settings'}
-                className={editorTab === 'settings' ? 'active' : ''}
-                onClick={() => setEditorTab('settings')}
-              >
-                Settings
+                Radio settings
               </button>
             </div>
-            {editorTab === 'channels' && <ChannelEditor />}
-            {editorTab === 'organize' && <ChannelOrganizer />}
-            {editorTab === 'settings' && <SettingsEditor />}
+            {inspectorTab === 'channel' && <ChannelEditor />}
+            {inspectorTab === 'settings' && <SettingsEditor />}
           </div>
-        </section>
-      </div>
+        </aside>
+      </main>
+
+      <section className="review-bar" aria-label="Review and output">
+        <div>
+          <span className="section-kicker">Review</span>
+          <p>
+            {warnings.length === 0
+              ? 'No channel warnings found.'
+              : `${warnings.length} warning${warnings.length === 1 ? '' : 's'} to review before writing.`}
+          </p>
+          {warnings.length > 0 && (
+            <ul className="warning-list">
+              {warnings.slice(0, 3).map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="output-actions">
+          <SaveImageButton />
+          {supportsDirectClone && <WriteToRadioButton warnings={warnings} />}
+        </div>
+      </section>
 
       <SupportButtons />
 
       {modal === 'repeater' && <RepeaterWizard onClose={() => setModal('none')} />}
       {modal === 'presets' && <PresetPicker onClose={() => setModal('none')} />}
       {modal === 'connect' && <ConnectWizard onClose={() => setModal('none')} />}
+      {modal === 'organize' && (
+        <div className="modal-overlay" onClick={() => setModal('none')}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <ChannelOrganizer />
+            <div className="actions">
+              <button onClick={() => setModal('none')}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function SelectedChannelSummary({
+  channel,
+  index,
+}: {
+  channel: Channel | null;
+  index: number;
+}) {
+  if (!channel) {
+    return (
+      <section className="selected-summary empty-summary">
+        <span className="section-kicker">Selected</span>
+        <h2>Channel {index + 1}</h2>
+        <p>Empty memory slot</p>
+      </section>
+    );
+  }
+
+  const duplex = duplexDescription(channel.rxHz, channel.txHz);
+  const offsetLabel =
+    duplex.kind === 'simplex'
+      ? 'simplex'
+      : duplex.kind === 'off'
+        ? 'TX off'
+        : duplex.kind === 'split'
+          ? `split ${duplex.offsetMhz.toFixed(4)} MHz`
+          : `${duplex.kind === 'plus' ? '+' : '-'}${duplex.offsetMhz.toFixed(3)} MHz`;
+
+  return (
+    <section className="selected-summary">
+      <span className="section-kicker">Selected</span>
+      <h2>
+        Channel {index + 1}
+        {channel.name && <span>{channel.name}</span>}
+      </h2>
+      <dl>
+        <div>
+          <dt>RX</dt>
+          <dd>{formatMhz(channel.rxHz)}</dd>
+        </div>
+        <div>
+          <dt>Offset</dt>
+          <dd>{offsetLabel}</dd>
+        </div>
+        <div>
+          <dt>TX tone</dt>
+          <dd>{formatTone(channel.txTone)}</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function buildReviewWarnings(
+  channels: (Channel | null)[],
+  radio: RadioModel,
+) {
+  const warnings: string[] = [];
+  channels.forEach((channel, index) => {
+    if (!channel) return;
+    if (!isFreqInBands(channel.rxHz, radio)) {
+      warnings.push(`Channel ${index + 1}: receive frequency is outside ${radio.label} bands.`);
+    }
+    if (channel.txHz !== -1 && !isFreqInBands(channel.txHz, radio)) {
+      warnings.push(`Channel ${index + 1}: transmit frequency is outside ${radio.label} bands.`);
+    }
+    if (!channel.name.trim()) {
+      warnings.push(`Channel ${index + 1}: no display name.`);
+    }
+  });
+  return warnings;
 }

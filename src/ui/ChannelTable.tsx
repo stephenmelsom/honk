@@ -9,7 +9,6 @@ export function ChannelTable() {
 
   return (
     <section className="channel-table">
-      <h2>Channels</h2>
       <div className="grid-scroll">
         <table>
           <thead>

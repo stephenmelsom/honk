@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyImageBuffer } from '../image/synthetic.ts';
 import { parseImage } from '../image/parse.ts';
 import { serializeImage } from '../image/serialize.ts';
-import { detectRadioFromImage, listRadios, UV5R, UV82L } from './index.ts';
+import { detectRadioFromImage, FTM100DR, listRadios, UV5R, UV82L } from './index.ts';
 
 describe('radio registry', () => {
   it('lists the supported UV-5R-family radios', () => {
@@ -12,6 +12,7 @@ describe('radio registry', () => {
       'uv82',
       'uv82hp',
       'uv82l',
+      'ftm100dr',
     ]);
   });
 
@@ -45,6 +46,34 @@ describe('radio registry', () => {
     const bytes = serializeImage(img, UV5R);
     const reparsed = parseImage(bytes, UV5R);
     expect(reparsed.radioId).toBe('uv5r');
+    expect(reparsed.channels[0]).toEqual(img.channels[0]);
+  });
+
+  it('round-trips Yaesu FTM-100DR channel data in ADMS-style images', () => {
+    const img = parseImage(emptyImageBuffer(FTM100DR), FTM100DR);
+    img.channels[0] = {
+      rxHz: 146_940_000,
+      txHz: 146_340_000,
+      rxTone: { kind: 'none' },
+      txTone: { kind: 'ctcss', hz: 100.0 },
+      name: 'RPT100',
+      bandwidth: 'wide',
+      power: 'high',
+      scanAdd: true,
+      busyLockout: false,
+      rawFlags: {
+        flagsByte0Other: 0,
+        isUhf: 0,
+        scode: 0,
+        flagsByte1: 0,
+        flagsByte2Other: 0,
+        flagsByte3PttId: 0,
+      },
+    };
+
+    const bytes = serializeImage(img, FTM100DR);
+    const reparsed = parseImage(bytes, FTM100DR);
+    expect(reparsed.radioId).toBe('ftm100dr');
     expect(reparsed.channels[0]).toEqual(img.channels[0]);
   });
 });

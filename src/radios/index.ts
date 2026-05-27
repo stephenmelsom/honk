@@ -4,6 +4,7 @@ import { UV6 } from './uv6.ts';
 import { UV82 } from './uv82.ts';
 import { UV82HP } from './uv82hp.ts';
 import { UV82L } from './uv82l.ts';
+import { FTM100DR } from './ftm100dr.ts';
 
 export const RADIOS: Readonly<Record<string, RadioModel>> = {
   [UV5R.id]: UV5R,
@@ -11,6 +12,7 @@ export const RADIOS: Readonly<Record<string, RadioModel>> = {
   [UV82.id]: UV82,
   [UV82HP.id]: UV82HP,
   [UV82L.id]: UV82L,
+  [FTM100DR.id]: FTM100DR,
 };
 
 export const DEFAULT_RADIO_ID = UV82L.id;
@@ -40,4 +42,5 @@ export { UV6 } from './uv6.ts';
 export { UV82 } from './uv82.ts';
 export { UV82HP } from './uv82hp.ts';
 export { UV82L } from './uv82l.ts';
+export { FTM100DR } from './ftm100dr.ts';
 export type { RadioModel, MemoryLayout, ChannelBitLayout, FrequencyLimits, SerialProtocolSpec } from './types.ts';

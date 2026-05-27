@@ -76,7 +76,8 @@ export interface RadioModel {
   imageSize: number;
   channelCount: number;
   memory: MemoryLayout;
-  serial: SerialProtocolSpec;
+  serial?: SerialProtocolSpec;
+  imageCodec?: 'uv5r' | 'yaesu-ftm';
   /** Documented radio-side rx/tx limits. UI uses these for non-blocking warnings. */
   frequencyLimits: FrequencyLimits;
   /** Frequency used when the editor opens an empty channel. */

@@ -4,8 +4,12 @@ import type { RadioModel } from '../radios/types.ts';
 import { channelOffset, nameOffset } from '../radios/util.ts';
 import type { Channel, RadioImage } from './schema.ts';
 import { parseSettings } from './settings.ts';
+import { parseYaesuFtmImage } from './yaesuFtm.ts';
 
 export function parseImage(buf: Uint8Array, model: RadioModel): RadioImage {
+  if (model.imageCodec === 'yaesu-ftm') {
+    return parseYaesuFtmImage(buf, model);
+  }
   if (buf.length !== model.imageSize) {
     throw new Error(`Expected ${model.imageSize}-byte ${model.label} image, got ${buf.length}`);
   }

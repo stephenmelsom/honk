@@ -5,8 +5,12 @@
 
 import type { RadioModel } from '../radios/types.ts';
 import { writeDefaultSettings } from './settings.ts';
+import { emptyYaesuFtmBuffer } from './yaesuFtm.ts';
 
 export function emptyImageBuffer(model: RadioModel): Uint8Array {
+  if (model.imageCodec === 'yaesu-ftm') {
+    return emptyYaesuFtmBuffer(model);
+  }
   const buf = new Uint8Array(model.imageSize);
   buf.fill(0xff);
   buf.set(model.expectedIdent, model.memory.offsets.ident);
