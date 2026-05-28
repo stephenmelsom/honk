@@ -26,6 +26,8 @@ import {
 import { BUILTIN_SETTINGS_PROFILES } from '../settingsProfiles/types.ts';
 import type { SettingsProfile } from '../settingsProfiles/types.ts';
 import { Field } from './Field.tsx';
+import { InlineConfirmButton } from './InlineConfirmButton.tsx';
+import { useToast } from './toastStore.ts';
 
 const VOX_VALUES = Array.from({ length: 11 }, (_, value) => value);
 const BACKLIGHT_VALUES = Array.from({ length: 25 }, (_, value) => value);
@@ -39,23 +41,20 @@ export function SettingsEditor() {
   const settings = useHonk((s) => s.image.settings);
   const updateSettings = useHonk((s) => s.updateSettings);
   const applySettingsProfile = useHonk((s) => s.applySettingsProfile);
+  const showToast = useToast();
   const [customProfiles, setCustomProfiles] = useState<SettingsProfile[]>(() =>
     loadCustomSettingsProfiles(),
   );
   const [profileName, setProfileName] = useState('');
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [selectedProfileId, setSelectedProfileId] = useState(
-    BUILTIN_SETTINGS_PROFILES[0]?.id ?? '',
-  );
+  const [lastAppliedProfileId, setLastAppliedProfileId] = useState<string | null>(null);
   const allProfiles = [...BUILTIN_SETTINGS_PROFILES, ...customProfiles];
-  const selectedProfile = allProfiles.find((profile) => profile.id === selectedProfileId);
-  const selectedCustomProfile = customProfiles.find(
-    (profile) => profile.id === selectedProfileId,
-  );
 
   const applyProfile = (profile: SettingsProfile) => {
     applySettingsProfile(profile);
+    setLastAppliedProfileId(profile.id);
     setProfileError(null);
+    showToast({ kind: 'success', message: `Applied '${profile.name}'` });
   };
 
   const saveProfile = () => {
@@ -82,9 +81,7 @@ export function SettingsEditor() {
     try {
       saveCustomSettingsProfiles(next);
       setCustomProfiles(next);
-      if (selectedProfileId === id) {
-        setSelectedProfileId(BUILTIN_SETTINGS_PROFILES[0]?.id ?? next[0]?.id ?? '');
-      }
+      if (lastAppliedProfileId === id) setLastAppliedProfileId(null);
       setProfileError(null);
     } catch (err) {
       setProfileError(`Could not delete profile: ${(err as Error).message}`);
@@ -98,45 +95,33 @@ export function SettingsEditor() {
         <div className="editor-header">
           <h3>Profiles</h3>
         </div>
-        <div className="profile-picker">
-          <select
-            value={selectedProfileId}
-            onChange={(e) => setSelectedProfileId(e.target.value)}
-            aria-label="Settings profile"
-          >
-            <optgroup label="Built-in">
-              {BUILTIN_SETTINGS_PROFILES.map((profile) => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.name}
-                </option>
-              ))}
-            </optgroup>
-            {customProfiles.length > 0 && (
-              <optgroup label="Custom">
-                {customProfiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-          <button
-            type="button"
-            onClick={() => selectedProfile && applyProfile(selectedProfile)}
-            disabled={!selectedProfile}
-          >
-            Apply
-          </button>
-          {selectedCustomProfile && (
-            <button type="button" onClick={() => deleteProfile(selectedCustomProfile.id)}>
-              Delete
-            </button>
-          )}
+        <div className="profile-cards">
+          {allProfiles.map((profile) => (
+            <div
+              key={profile.id}
+              className={`profile-card${lastAppliedProfileId === profile.id ? ' applied' : ''}`}
+            >
+              <button
+                type="button"
+                className="profile-card-body"
+                onClick={() => applyProfile(profile)}
+              >
+                <span className="profile-card-name">{profile.name}</span>
+                {profile.description && (
+                  <span className="profile-card-desc muted small">{profile.description}</span>
+                )}
+              </button>
+              {profile.kind === 'custom' && (
+                <InlineConfirmButton
+                  label="×"
+                  confirmLabel="Delete?"
+                  onConfirm={() => deleteProfile(profile.id)}
+                  className="profile-card-delete"
+                />
+              )}
+            </div>
+          ))}
         </div>
-        {selectedProfile?.description && (
-          <p className="muted small">{selectedProfile.description}</p>
-        )}
         <div className="profile-save">
           <input
             type="text"
@@ -151,197 +136,200 @@ export function SettingsEditor() {
         {profileError && <p className="error small">{profileError}</p>}
       </section>
 
-      <Field label="Squelch" hint="Higher values require stronger signals to open the speaker.">
-        <select
-          value={settings.squelch}
-          onChange={(e) => updateSettings({ squelch: Number(e.target.value) })}
-        >
-          {SQUELCH_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <details open className="settings-group">
+        <summary>Receive</summary>
+        <div className="settings-group-fields">
+          <Field label="Squelch" hint="Higher values require stronger signals to open the speaker.">
+            <select
+              value={settings.squelch}
+              onChange={(e) => updateSettings({ squelch: Number(e.target.value) })}
+            >
+              {SQUELCH_VALUES.map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Step" hint="Frequency tuning step used in VFO mode.">
+            <select
+              value={settings.stepKhz}
+              onChange={(e) =>
+                updateSettings({ stepKhz: Number(e.target.value) as TuningStepKhz })
+              }
+            >
+              {TUNING_STEPS_KHZ.map((value) => (
+                <option key={value} value={value}>{value} kHz</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Scan resume">
+            <select
+              value={settings.scanResume}
+              onChange={(e) => updateSettings({ scanResume: e.target.value as ScanResume })}
+            >
+              {SCAN_RESUME_VALUES.map((value) => (
+                <option key={value} value={value}>{value.toUpperCase()}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Dual watch">
+            <input
+              type="checkbox"
+              checked={settings.dualWatch}
+              onChange={(e) => updateSettings({ dualWatch: e.target.checked })}
+            />
+          </Field>
+        </div>
+      </details>
 
-      <Field label="Step" hint="Frequency tuning step used in VFO mode.">
-        <select
-          value={settings.stepKhz}
-          onChange={(e) =>
-            updateSettings({ stepKhz: Number(e.target.value) as TuningStepKhz })
-          }
-        >
-          {TUNING_STEPS_KHZ.map((value) => (
-            <option key={value} value={value}>
-              {value} kHz
-            </option>
-          ))}
-        </select>
-      </Field>
+      <details open className="settings-group">
+        <summary>Transmit</summary>
+        <div className="settings-group-fields">
+          <Field label="VOX" hint="Voice-activated transmit sensitivity.">
+            <select
+              value={settings.vox}
+              onChange={(e) => updateSettings({ vox: Number(e.target.value) })}
+            >
+              {VOX_VALUES.map((value) => (
+                <option key={value} value={value}>{value === 0 ? 'Off' : value}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Timeout timer" hint="Maximum transmit time before the radio stops transmitting.">
+            <select
+              value={settings.timeoutSeconds ?? 'off'}
+              onChange={(e) =>
+                updateSettings({
+                  timeoutSeconds: e.target.value === 'off' ? null : Number(e.target.value),
+                })
+              }
+            >
+              {TIMEOUT_VALUES.map((value) => (
+                <option key={value ?? 'off'} value={value ?? 'off'}>
+                  {value === null ? 'Off' : `${value} sec`}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Busy lockout">
+            <input
+              type="checkbox"
+              checked={settings.busyChannelLockout}
+              onChange={(e) => updateSettings({ busyChannelLockout: e.target.checked })}
+            />
+          </Field>
+        </div>
+      </details>
 
-      <Field label="Battery saver">
-        <select
-          value={settings.batterySaver}
-          onChange={(e) => updateSettings({ batterySaver: e.target.value as BatterySaver })}
-        >
-          {BATTERY_SAVER_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {batterySaverLabel(value)}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <details open className="settings-group">
+        <summary>Audio &amp; alerts</summary>
+        <div className="settings-group-fields">
+          <Field label="Beep">
+            <input
+              type="checkbox"
+              checked={settings.beep}
+              onChange={(e) => updateSettings({ beep: e.target.checked })}
+            />
+          </Field>
+          <Field label="Voice">
+            <select
+              value={settings.voice}
+              onChange={(e) => updateSettings({ voice: e.target.value as VoiceMode })}
+            >
+              {VOICE_VALUES.map((value) => (
+                <option key={value} value={value}>{titleLabel(value)}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Alarm mode">
+            <select
+              value={settings.alarmMode}
+              onChange={(e) => updateSettings({ alarmMode: e.target.value as AlarmMode })}
+            >
+              {ALARM_MODE_VALUES.map((value) => (
+                <option key={value} value={value}>{titleLabel(value)}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      </details>
 
-      <Field label="VOX" hint="Voice-activated transmit sensitivity.">
-        <select
-          value={settings.vox}
-          onChange={(e) => updateSettings({ vox: Number(e.target.value) })}
-        >
-          {VOX_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {value === 0 ? 'Off' : value}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <details open className="settings-group">
+        <summary>Display &amp; LEDs</summary>
+        <div className="settings-group-fields">
+          <Field label="Backlight">
+            <select
+              value={settings.backlightSeconds}
+              onChange={(e) => updateSettings({ backlightSeconds: Number(e.target.value) })}
+            >
+              {BACKLIGHT_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {value === 0 ? 'Off' : `${value} sec`}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Display A">
+            <DisplayModeSelect
+              value={settings.displayModeA}
+              onChange={(displayModeA) => updateSettings({ displayModeA })}
+            />
+          </Field>
+          <Field label="Display B">
+            <DisplayModeSelect
+              value={settings.displayModeB}
+              onChange={(displayModeB) => updateSettings({ displayModeB })}
+            />
+          </Field>
+          <Field label="Standby LED">
+            <LedColorSelect
+              value={settings.standbyLed}
+              onChange={(standbyLed) => updateSettings({ standbyLed })}
+            />
+          </Field>
+          <Field label="RX LED">
+            <LedColorSelect
+              value={settings.rxLed}
+              onChange={(rxLed) => updateSettings({ rxLed })}
+            />
+          </Field>
+          <Field label="TX LED">
+            <LedColorSelect
+              value={settings.txLed}
+              onChange={(txLed) => updateSettings({ txLed })}
+            />
+          </Field>
+          <Field label="Auto key lock">
+            <input
+              type="checkbox"
+              checked={settings.automaticKeyLock}
+              onChange={(e) => updateSettings({ automaticKeyLock: e.target.checked })}
+            />
+          </Field>
+        </div>
+      </details>
 
-      <Field label="Backlight">
-        <select
-          value={settings.backlightSeconds}
-          onChange={(e) => updateSettings({ backlightSeconds: Number(e.target.value) })}
-        >
-          {BACKLIGHT_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {value === 0 ? 'Off' : `${value} sec`}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Timeout timer" hint="Maximum transmit time before the radio stops transmitting.">
-        <select
-          value={settings.timeoutSeconds ?? 'off'}
-          onChange={(e) =>
-            updateSettings({
-              timeoutSeconds: e.target.value === 'off' ? null : Number(e.target.value),
-            })
-          }
-        >
-          {TIMEOUT_VALUES.map((value) => (
-            <option key={value ?? 'off'} value={value ?? 'off'}>
-              {value === null ? 'Off' : `${value} sec`}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Voice">
-        <select
-          value={settings.voice}
-          onChange={(e) => updateSettings({ voice: e.target.value as VoiceMode })}
-        >
-          {VOICE_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {titleLabel(value)}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Scan resume">
-        <select
-          value={settings.scanResume}
-          onChange={(e) => updateSettings({ scanResume: e.target.value as ScanResume })}
-        >
-          {SCAN_RESUME_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {value.toUpperCase()}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Display A">
-        <DisplayModeSelect
-          value={settings.displayModeA}
-          onChange={(displayModeA) => updateSettings({ displayModeA })}
-        />
-      </Field>
-
-      <Field label="Display B">
-        <DisplayModeSelect
-          value={settings.displayModeB}
-          onChange={(displayModeB) => updateSettings({ displayModeB })}
-        />
-      </Field>
-
-      <Field label="Standby LED">
-        <LedColorSelect
-          value={settings.standbyLed}
-          onChange={(standbyLed) => updateSettings({ standbyLed })}
-        />
-      </Field>
-
-      <Field label="RX LED">
-        <LedColorSelect value={settings.rxLed} onChange={(rxLed) => updateSettings({ rxLed })} />
-      </Field>
-
-      <Field label="TX LED">
-        <LedColorSelect value={settings.txLed} onChange={(txLed) => updateSettings({ txLed })} />
-      </Field>
-
-      <Field label="Alarm mode">
-        <select
-          value={settings.alarmMode}
-          onChange={(e) => updateSettings({ alarmMode: e.target.value as AlarmMode })}
-        >
-          {ALARM_MODE_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {titleLabel(value)}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Dual watch">
-        <input
-          type="checkbox"
-          checked={settings.dualWatch}
-          onChange={(e) => updateSettings({ dualWatch: e.target.checked })}
-        />
-      </Field>
-
-      <Field label="Beep">
-        <input
-          type="checkbox"
-          checked={settings.beep}
-          onChange={(e) => updateSettings({ beep: e.target.checked })}
-        />
-      </Field>
-
-      <Field label="Busy lockout">
-        <input
-          type="checkbox"
-          checked={settings.busyChannelLockout}
-          onChange={(e) => updateSettings({ busyChannelLockout: e.target.checked })}
-        />
-      </Field>
-
-      <Field label="Auto key lock">
-        <input
-          type="checkbox"
-          checked={settings.automaticKeyLock}
-          onChange={(e) => updateSettings({ automaticKeyLock: e.target.checked })}
-        />
-      </Field>
-
-      <Field label="FM radio">
-        <input
-          type="checkbox"
-          checked={settings.broadcastFmRadio}
-          onChange={(e) => updateSettings({ broadcastFmRadio: e.target.checked })}
-        />
-      </Field>
+      <details open className="settings-group">
+        <summary>Extras</summary>
+        <div className="settings-group-fields">
+          <Field label="Battery saver">
+            <select
+              value={settings.batterySaver}
+              onChange={(e) => updateSettings({ batterySaver: e.target.value as BatterySaver })}
+            >
+              {BATTERY_SAVER_VALUES.map((value) => (
+                <option key={value} value={value}>{batterySaverLabel(value)}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="FM radio">
+            <input
+              type="checkbox"
+              checked={settings.broadcastFmRadio}
+              onChange={(e) => updateSettings({ broadcastFmRadio: e.target.checked })}
+            />
+          </Field>
+        </div>
+      </details>
     </aside>
   );
 }
@@ -356,9 +344,7 @@ function DisplayModeSelect({
   return (
     <select value={value} onChange={(e) => onChange(e.target.value as DisplayMode)}>
       {DISPLAY_MODE_VALUES.map((mode) => (
-        <option key={mode} value={mode}>
-          {titleLabel(mode)}
-        </option>
+        <option key={mode} value={mode}>{titleLabel(mode)}</option>
       ))}
     </select>
   );
@@ -374,9 +360,7 @@ function LedColorSelect({
   return (
     <select value={value} onChange={(e) => onChange(e.target.value as LedColor)}>
       {LED_COLOR_VALUES.map((color) => (
-        <option key={color} value={color}>
-          {titleLabel(color)}
-        </option>
+        <option key={color} value={color}>{titleLabel(color)}</option>
       ))}
     </select>
   );

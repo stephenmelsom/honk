@@ -1,17 +1,19 @@
 import { useRef } from 'react';
 import { useHonk } from '../state/store.ts';
 import { downloadBlob } from '../utils/download.ts';
+import { useToast } from './toastStore.ts';
 
 export function OpenImageButton() {
   const inputRef = useRef<HTMLInputElement>(null);
   const loadImage = useHonk((s) => s.loadImage);
+  const showToast = useToast();
 
   const onFile = async (file: File) => {
     const buf = new Uint8Array(await file.arrayBuffer());
     try {
       loadImage(buf, 'file');
     } catch (err) {
-      alert(`Could not read image file: ${(err as Error).message}`);
+      showToast({ kind: 'error', message: `Could not read image file: ${(err as Error).message}` });
     }
   };
 

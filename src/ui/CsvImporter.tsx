@@ -1,17 +1,19 @@
 import { useRef } from 'react';
 import { useHonk } from '../state/store.ts';
 import { parseCsv } from '../radio/csv.ts';
+import { useToast } from './toastStore.ts';
 
 export function CsvImporter() {
   const inputRef = useRef<HTMLInputElement>(null);
   const channels = useHonk((s) => s.image.channels);
   const updateChannel = useHonk((s) => s.updateChannel);
+  const showToast = useToast();
 
   const onFile = async (file: File) => {
     const text = await file.text();
     const r = parseCsv(text);
     if (r.channels.length === 0) {
-      alert('No channels found in CSV.');
+      showToast({ kind: 'error', message: 'No channels found in CSV.' });
       return;
     }
     let cursor = 0;
@@ -23,10 +25,12 @@ export function CsvImporter() {
       cursor++;
       placed++;
     }
-    alert(
-      `Imported ${placed} channel${placed === 1 ? '' : 's'}.` +
+    showToast({
+      kind: 'success',
+      message:
+        `Imported ${placed} channel${placed === 1 ? '' : 's'}.` +
         (r.skipped.length ? ` Skipped ${r.skipped.length} row(s).` : ''),
-    );
+    });
   };
 
   return (

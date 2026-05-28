@@ -6,6 +6,8 @@ import type { ToneSlot } from '../codec/tones.ts';
 import { formatMhz, parseMhz } from '../radio/format.ts';
 import type { RadioModel } from '../radios/types.ts';
 import { isFreqInBands } from '../radios/util.ts';
+import { InlineConfirmButton } from './InlineConfirmButton.tsx';
+import { useToast } from './toastStore.ts';
 
 const blankFlags: Channel['rawFlags'] = {
   flagsByte0Other: 0,
@@ -34,13 +36,76 @@ function emptyChannel(model: RadioModel): Channel {
 export function ChannelEditor() {
   const index = useHonk((s) => s.selectedChannel);
   const channel = useHonk((s) => s.image.channels[index]);
+  const channelsLength = useHonk((s) => s.image.channels.length);
   const updateChannel = useHonk((s) => s.updateChannel);
+  const selectChannel = useHonk((s) => s.selectChannel);
   const radio = useHonk((s) => s.radio);
+  const showToast = useToast();
+
+  const onDuplicate = () => {
+    if (!channel) return;
+    const channels = useHonk.getState().image.channels;
+    let target = -1;
+    for (let i = index + 1; i < channels.length; i++) {
+      if (channels[i] === null) { target = i; break; }
+    }
+    if (target === -1) {
+      for (let i = 0; i < index; i++) {
+        if (channels[i] === null) { target = i; break; }
+      }
+    }
+    if (target === -1) {
+      showToast({ kind: 'error', message: 'No empty slot to duplicate into.' });
+      return;
+    }
+    updateChannel(target, { ...channel });
+    selectChannel(target);
+    showToast({ kind: 'success', message: `Duplicated to channel ${target + 1}.` });
+  };
+
+  const editorHeader = (
+    <header className="editor-header">
+      <h2>
+        Channel {index + 1}
+        {channel?.name ? <span> · {channel.name}</span> : null}
+      </h2>
+      <div className="actions-cluster">
+        <button
+          type="button"
+          onClick={() => selectChannel(index - 1)}
+          disabled={index === 0}
+          title="Previous channel"
+        >
+          ‹ Prev
+        </button>
+        <button
+          type="button"
+          onClick={() => selectChannel(index + 1)}
+          disabled={index >= channelsLength - 1}
+          title="Next channel"
+        >
+          Next ›
+        </button>
+        {channel && (
+          <button type="button" onClick={onDuplicate} title="Duplicate to next empty slot">
+            Duplicate
+          </button>
+        )}
+        {channel && (
+          <InlineConfirmButton
+            label="Delete"
+            confirmLabel="Confirm delete"
+            onConfirm={() => updateChannel(index, null)}
+          />
+        )}
+      </div>
+    </header>
+  );
 
   if (!channel) {
     return (
       <aside className="editor">
-        <h2>Channel {index + 1}</h2>
+        {editorHeader}
         <p>
           <em>This slot is empty.</em>
         </p>
@@ -59,10 +124,7 @@ export function ChannelEditor() {
 
   return (
     <aside className="editor">
-      <header className="editor-header">
-        <h2>Channel {index + 1}</h2>
-        <button onClick={() => updateChannel(index, null)}>Delete</button>
-      </header>
+      {editorHeader}
 
       <Field label="Name" hint="Up to 7 characters; shown on the radio display.">
         <input

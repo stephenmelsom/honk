@@ -3,12 +3,14 @@ import { useHonk } from '../state/store.ts';
 import { loadAllPresets } from '../presets/loader.ts';
 import { presetToChannel } from '../presets/types.ts';
 import type { PresetPack } from '../presets/types.ts';
+import { useToast } from './toastStore.ts';
 
 export function PresetPicker({ onClose }: { onClose: () => void }) {
   const [packs, setPacks] = useState<PresetPack[]>([]);
   const [error, setError] = useState<string | null>(null);
   const channels = useHonk((s) => s.image.channels);
   const updateChannel = useHonk((s) => s.updateChannel);
+  const showToast = useToast();
 
   useEffect(() => {
     void loadAllPresets(import.meta.env.BASE_URL.replace(/\/$/, ''))
@@ -21,7 +23,6 @@ export function PresetPicker({ onClose }: { onClose: () => void }) {
     let cursor = 0;
     let placed = 0;
     for (const p of pack.channels) {
-      // Find next empty slot from cursor onward.
       while (cursor < next.length && next[cursor] !== null) cursor++;
       if (cursor >= next.length) break;
       next[cursor] = presetToChannel(p);
@@ -29,14 +30,14 @@ export function PresetPicker({ onClose }: { onClose: () => void }) {
       cursor++;
     }
     if (placed === 0) {
-      alert('No empty channel slots available.');
+      showToast({ kind: 'error', message: 'No empty channel slots available.' });
       return;
     }
     next.forEach((c, i) => {
       if (c !== channels[i]) updateChannel(i, c);
     });
     onClose();
-    alert(`Added ${placed} channel${placed === 1 ? '' : 's'} from ${pack.name}.`);
+    showToast({ kind: 'success', message: `Added ${placed} channel${placed === 1 ? '' : 's'} from ${pack.name}.` });
   };
 
   return (

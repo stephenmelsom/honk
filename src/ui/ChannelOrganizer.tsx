@@ -1,6 +1,7 @@
 import { useHonk } from '../state/store.ts';
 import { compactChannels, deleteSlot, insertEmptySlot, sortChannels } from '../radio/organize.ts';
 import type { Channel } from '../image/schema.ts';
+import { InlineConfirmButton } from './InlineConfirmButton.tsx';
 
 export function ChannelOrganizer() {
   const channels = useHonk((s) => s.image.channels);
@@ -41,32 +42,16 @@ export function ChannelOrganizer() {
           Channel {selectedLabel} is selected in the table.
         </p>
         <div className="organizer-actions">
-          <button
-            type="button"
-            onClick={() => {
-              if (
-                !confirm(
-                  `Insert an empty slot at channel ${selectedLabel}? The last slot will be dropped.`,
-                )
-              ) {
-                return;
-              }
-              apply(insertEmptySlot(channels, selected), selected);
-            }}
-          >
-            Insert empty here
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (!confirm(`Delete channel ${selectedLabel} and shift following channels up?`)) {
-                return;
-              }
-              apply(deleteSlot(channels, selected), selected);
-            }}
-          >
-            Delete this slot
-          </button>
+          <InlineConfirmButton
+            label="Insert empty here"
+            confirmLabel={`Insert at ${selectedLabel}?`}
+            onConfirm={() => apply(insertEmptySlot(channels, selected), selected)}
+          />
+          <InlineConfirmButton
+            label="Delete this slot"
+            confirmLabel={`Delete slot ${selectedLabel}?`}
+            onConfirm={() => apply(deleteSlot(channels, selected), selected)}
+          />
         </div>
       </section>
     </aside>

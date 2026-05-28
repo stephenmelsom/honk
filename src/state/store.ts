@@ -46,14 +46,6 @@ export const useHonk = create<HonkState>((set, get) => ({
   setRadio: (id) => {
     const radio = getRadio(id);
     if (radio === get().radio) return;
-    // Switching radios discards the current in-memory image — its byte layout
-    // is tied to the previous model and would mis-parse against the new one.
-    if (get().dirty) {
-      const ok = confirm(
-        `Switch to ${radio.label}? Unsaved changes to the current image will be discarded.`,
-      );
-      if (!ok) return;
-    }
     set({
       radio,
       image: parseImage(emptyImageBuffer(radio), radio),

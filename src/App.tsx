@@ -9,6 +9,8 @@ import { RepeaterWizard } from './ui/RepeaterWizard.tsx';
 import { PresetPicker } from './ui/PresetPicker.tsx';
 import { ConnectWizard, WriteToRadioButton } from './ui/ConnectWizard.tsx';
 import { RadioPicker } from './ui/RadioPicker.tsx';
+import { GetStartedEmpty } from './ui/GetStartedEmpty.tsx';
+import { ToastViewport } from './ui/Toast.tsx';
 import { hasWebSerial } from './serial/capability.ts';
 import { useHonk } from './state/store.ts';
 import { duplexDescription, formatMhz, formatTone } from './radio/format.ts';
@@ -123,7 +125,6 @@ function SupportButtons() {
 export function App() {
   const [modal, setModal] = useState<Modal>('none');
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('channel');
-  const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
   const supportsSerial = hasWebSerial();
   const radio = useHonk((s) => s.radio);
   const supportsDirectClone = supportsSerial && !!radio.serial;
@@ -162,6 +163,13 @@ export function App() {
             {dirty ? ' · unsaved changes' : ''}
           </p>
         </div>
+        <div className="source-actions">
+          {supportsDirectClone && (
+            <button onClick={() => setModal('connect')}>Read from radio</button>
+          )}
+          <OpenImageButton />
+          <NewBlankButton />
+        </div>
       </section>
 
       {!supportsSerial && (
@@ -180,27 +188,6 @@ export function App() {
               <h2>Memory slots</h2>
             </div>
             <div className="toolbar channel-actions">
-              <div className="source-menu-wrap">
-                <button onClick={() => setSourceMenuOpen((open) => !open)}>
-                  Source
-                </button>
-                {sourceMenuOpen && (
-                  <div className="source-menu">
-                    {supportsDirectClone && (
-                      <button
-                        onClick={() => {
-                          setSourceMenuOpen(false);
-                          setModal('connect');
-                        }}
-                      >
-                        Read from radio
-                      </button>
-                    )}
-                    <OpenImageButton />
-                    <NewBlankButton />
-                  </div>
-                )}
-              </div>
               <button onClick={() => setModal('repeater')}>
                 Add repeater
               </button>
@@ -209,7 +196,16 @@ export function App() {
               <button onClick={() => setModal('organize')}>Organize</button>
             </div>
           </div>
-          <ChannelTable />
+          {programmedCount === 0 ? (
+            <GetStartedEmpty
+              supportsDirectClone={supportsDirectClone}
+              onReadFromRadio={() => setModal('connect')}
+              onAddChannelPack={() => setModal('presets')}
+              onAddRepeater={() => setModal('repeater')}
+            />
+          ) : (
+            <ChannelTable />
+          )}
         </section>
 
         <aside className="inspector-column" aria-label="Inspector">
@@ -278,6 +274,8 @@ export function App() {
           </div>
         </div>
       )}
+
+      <ToastViewport />
     </div>
   );
 }

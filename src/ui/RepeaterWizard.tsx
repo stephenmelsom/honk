@@ -8,6 +8,7 @@ import {
   defaultOffsetMhz,
 } from '../radio/repeater.ts';
 import type { OffsetDirection, RepeaterInput } from '../radio/repeater.ts';
+import { useToast } from './toastStore.ts';
 
 const initial: RepeaterInput = {
   name: '',
@@ -25,6 +26,7 @@ export function RepeaterWizard({ onClose }: { onClose: () => void }) {
   const selected = useHonk((s) => s.selectedChannel);
   const channels = useHonk((s) => s.image.channels);
   const updateChannel = useHonk((s) => s.updateChannel);
+  const showToast = useToast();
 
   const firstEmpty = channels.findIndex((c) => c === null);
   const targetSlot = channels[selected] === null ? selected : firstEmpty;
@@ -43,7 +45,7 @@ export function RepeaterWizard({ onClose }: { onClose: () => void }) {
 
   const onAdd = () => {
     if (targetSlot < 0) {
-      alert('No empty channel slots — delete one first.');
+      showToast({ kind: 'error', message: 'No empty channel slots — delete one first.' });
       return;
     }
     const ch = buildRepeaterChannel(input);
