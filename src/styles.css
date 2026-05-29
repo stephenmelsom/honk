@@ -2,21 +2,36 @@
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color-scheme: light dark;
   line-height: 1.4;
-  --accent: #2d6cdf;
-  --border: #d5d8de;
-  --table-header-tint: rgba(127, 127, 127, 0.1);
-  --row-hover: rgba(45, 108, 223, 0.08);
-  --row-selected: rgba(45, 108, 223, 0.18);
-  --muted: #6a6f78;
+  --bg: #f0f2f7;
+  --surface: #ffffff;
+  --surface-raised: #f6f8fc;
+  --accent: #2563eb;
+  --accent-bg: rgba(37, 99, 235, 0.08);
+  --accent-bg-strong: rgba(37, 99, 235, 0.18);
+  --border: #dde1ea;
+  --table-header-tint: var(--accent-bg);
+  --row-hover: var(--accent-bg);
+  --row-selected: var(--accent-bg-strong);
+  --muted: #6b7280;
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --table-header-tint: rgba(127, 127, 127, 0.16);
-    --border: #383b42;
-    --row-hover: rgba(120, 170, 255, 0.12);
-    --row-selected: rgba(120, 170, 255, 0.25);
-    --muted: #9a9fa8;
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-raised: #1e2430;
+    --accent: #4d8ef8;
+    --accent-bg: rgba(77, 142, 248, 0.12);
+    --accent-bg-strong: rgba(77, 142, 248, 0.25);
+    --border: #30363d;
+    --table-header-tint: var(--accent-bg);
+    --row-hover: var(--accent-bg);
+    --row-selected: var(--accent-bg-strong);
+    --muted: #8b949e;
+    --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -28,9 +43,8 @@ body {
   margin: 0;
   padding: 0;
   font-size: 14px;
-  background:
-    linear-gradient(180deg, rgba(45, 108, 223, 0.06), transparent 14rem),
-    Canvas;
+  min-height: 100vh;
+  background: var(--bg);
 }
 
 .app {
@@ -94,12 +108,31 @@ button {
   padding: 0.35rem 0.65rem;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: transparent;
+  background: var(--surface-raised);
+  color: inherit;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
 
 button:hover {
-  background: var(--row-hover);
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+
+button:active {
+  background: var(--accent-bg-strong);
+}
+
+.btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--accent), black 12%);
+  border-color: color-mix(in srgb, var(--accent), black 12%);
 }
 
 .write-action {
@@ -110,11 +143,22 @@ button:hover {
 
 .write-action:hover {
   background: #941b16;
+  border-color: #941b16;
 }
 
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 input[type='text'],
@@ -124,8 +168,17 @@ select {
   padding: 0.25rem 0.45rem;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: transparent;
+  background: var(--surface-raised);
   color: inherit;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+input[type='text']:focus,
+input[type='number']:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
 .banner {
@@ -144,7 +197,8 @@ select {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.65rem 0.8rem;
-  background: color-mix(in srgb, Canvas, var(--accent) 3%);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .source-actions {
@@ -166,12 +220,22 @@ select {
 }
 
 .section-kicker {
-  display: block;
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--accent);
   font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.section-kicker::before {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 .workspace {
@@ -257,7 +321,8 @@ select {
   border-radius: 8px;
   max-height: 72vh;
   overflow: auto;
-  background: Canvas;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 table {
@@ -271,7 +336,7 @@ thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: linear-gradient(var(--table-header-tint), var(--table-header-tint)), Canvas;
+  background: linear-gradient(var(--table-header-tint), var(--table-header-tint)), var(--surface);
   text-align: left;
   padding: 0.3rem 0.45rem;
   font-weight: 600;
@@ -303,13 +368,15 @@ tbody tr.empty td {
 
 .editor {
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0.65rem 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   max-height: 70vh;
   overflow: auto;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .right-panel {
@@ -320,7 +387,8 @@ tbody tr.empty td {
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: Canvas;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .tabs {
@@ -329,7 +397,7 @@ tbody tr.empty td {
   gap: 0;
   padding: 0;
   border-bottom: 1px solid var(--border);
-  background: Canvas;
+  background: var(--surface);
 }
 
 .tabs button {
@@ -339,6 +407,7 @@ tbody tr.empty td {
   border-radius: 0;
   padding: 0.45rem 0.65rem 0.35rem;
   background: transparent;
+  box-shadow: none;
 }
 
 .tabs button:hover {
@@ -346,7 +415,7 @@ tbody tr.empty td {
 }
 
 .tabs button.active {
-  background: Canvas;
+  background: var(--surface);
   border-bottom-color: var(--accent);
 }
 
@@ -356,6 +425,8 @@ tbody tr.empty td {
   max-height: none;
   min-height: 0;
   flex: 1;
+  box-shadow: none;
+  background: transparent;
 }
 
 .selected-summary {
@@ -363,7 +434,8 @@ tbody tr.empty td {
   border-radius: 8px;
   padding: 0.65rem 0.75rem;
   margin-bottom: 0.5rem;
-  background: Canvas;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .selected-summary h2 {
@@ -385,7 +457,30 @@ tbody tr.empty td {
   color: var(--muted);
 }
 
-.selected-summary dl,
+.summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.summary-band {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.summary-band.warn {
+  background: rgba(161, 92, 0, 0.14);
+  color: #a15c00;
+}
+
 .write-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -393,12 +488,10 @@ tbody tr.empty td {
   margin: 0.5rem 0 0;
 }
 
-.selected-summary dl div,
 .write-summary div {
   min-width: 0;
 }
 
-.selected-summary dt,
 .write-summary dt {
   color: var(--muted);
   font-size: 0.75rem;
@@ -406,14 +499,13 @@ tbody tr.empty td {
   text-transform: uppercase;
 }
 
-.selected-summary dd,
 .write-summary dd {
   margin: 0.15rem 0 0;
   overflow-wrap: anywhere;
 }
 
 .empty-summary {
-  background: color-mix(in srgb, Canvas, var(--border) 18%);
+  background: var(--surface-raised);
 }
 
 .review-bar {
@@ -425,7 +517,8 @@ tbody tr.empty td {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.65rem 0.8rem;
-  background: Canvas;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .review-bar p {
@@ -563,11 +656,12 @@ tbody tr.empty td {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--row-hover);
+  background: var(--accent-bg);
   font-size: 0.75rem;
   font: inherit;
   cursor: pointer;
   color: var(--accent);
+  box-shadow: none;
 }
 
 .field-hint:focus-visible {
@@ -583,9 +677,9 @@ tbody tr.empty td {
   transform: translate(-50%, calc(-100% - 0.45rem));
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: Canvas;
-  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
-  color: CanvasText;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  color: inherit;
   font-size: 0.8rem;
   line-height: 1.35;
   padding: 0.45rem 0.55rem;
@@ -612,6 +706,7 @@ tbody tr.empty td {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -620,9 +715,9 @@ tbody tr.empty td {
 }
 
 .modal {
-  background: Canvas;
-  color: CanvasText;
-  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  border-radius: 12px;
   padding: 1.25rem 1.4rem;
   max-width: 480px;
   width: 100%;
@@ -631,7 +726,7 @@ tbody tr.empty td {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-md);
 }
 
 .modal .editor {
@@ -639,6 +734,8 @@ tbody tr.empty td {
   border-radius: 0;
   padding: 0;
   max-height: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 .modal h2 {
@@ -727,8 +824,8 @@ progress {
   border-radius: 8px;
   border: 1px solid var(--border);
   border-left-width: 4px;
-  background: Canvas;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
   pointer-events: all;
   animation: toast-in 0.2s ease;
 }
@@ -769,6 +866,7 @@ progress {
 .toast-close {
   border: 0;
   background: none;
+  box-shadow: none;
   padding: 0;
   width: 1.4rem;
   height: 1.4rem;
@@ -816,7 +914,8 @@ progress {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  background: Canvas;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .get-started-card-title {
@@ -929,6 +1028,7 @@ details[open].settings-group > summary::before {
   padding: 0.55rem 0.7rem;
   border: 0;
   border-radius: 0;
+  box-shadow: none;
 }
 
 .profile-card-name {
@@ -947,6 +1047,8 @@ details[open].settings-group > summary::before {
   padding: 0.1rem 0.35rem;
   font-size: 0.75rem;
   border-color: transparent;
+  background: transparent;
+  box-shadow: none;
   color: var(--muted);
   border-radius: 4px;
   line-height: 1;

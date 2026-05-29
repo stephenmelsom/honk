@@ -15,7 +15,7 @@ export const RADIOS: Readonly<Record<string, RadioModel>> = {
   [FTM100DR.id]: FTM100DR,
 };
 
-export const DEFAULT_RADIO_ID = UV82L.id;
+export const DEFAULT_RADIO_ID = UV5R.id;
 
 export function getRadio(id: string): RadioModel {
   const m = RADIOS[id];
