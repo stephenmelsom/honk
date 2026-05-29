@@ -12,7 +12,7 @@ import { RadioPicker } from './ui/RadioPicker.tsx';
 import { ToastViewport } from './ui/Toast.tsx';
 import { hasWebSerial } from './serial/capability.ts';
 import { useHonk } from './state/store.ts';
-import { duplexDescription, formatMhz, formatTone } from './radio/format.ts';
+import { duplexDescription } from './radio/format.ts';
 import { isFreqInBands } from './radios/util.ts';
 import type { RadioModel } from './radios/types.ts';
 import type { Channel } from './image/schema.ts';
@@ -199,7 +199,11 @@ export function App() {
         </section>
 
         <aside className="inspector-column" aria-label="Inspector">
-          <SelectedChannelSummary channel={selectedChannel} index={selected} />
+          <SelectedChannelSummary
+            channel={selectedChannel}
+            index={selected}
+            radio={radio}
+          />
           <div className="right-panel">
             <div className="tabs" role="tablist" aria-label="Inspector">
               <button
@@ -270,12 +274,21 @@ export function App() {
   );
 }
 
+function bandOf(hz: number, radio: RadioModel): 'VHF' | 'UHF' | null {
+  const { vhf, uhf } = radio.frequencyLimits;
+  if (vhf && hz >= vhf[0] && hz <= vhf[1]) return 'VHF';
+  if (uhf && hz >= uhf[0] && hz <= uhf[1]) return 'UHF';
+  return null;
+}
+
 function SelectedChannelSummary({
   channel,
   index,
+  radio,
 }: {
   channel: Channel | null;
   index: number;
+  radio: RadioModel;
 }) {
   if (!channel) {
     return (
@@ -297,6 +310,15 @@ function SelectedChannelSummary({
           ? `split ${duplex.offsetMhz.toFixed(4)} MHz`
           : `${duplex.kind === 'plus' ? '+' : '-'}${duplex.offsetMhz.toFixed(3)} MHz`;
 
+  const band = bandOf(channel.rxHz, radio);
+  const txOutOfBand = channel.txHz !== -1 && !isFreqInBands(channel.txHz, radio);
+  const status =
+    band === null
+      ? { label: 'Out of band', warn: true }
+      : txOutOfBand
+        ? { label: `${band} · TX out of band`, warn: true }
+        : { label: band, warn: false };
+
   return (
     <section className="selected-summary">
       <span className="section-kicker">Selected</span>
@@ -304,20 +326,12 @@ function SelectedChannelSummary({
         Channel {index + 1}
         {channel.name && <span>{channel.name}</span>}
       </h2>
-      <dl>
-        <div>
-          <dt>RX</dt>
-          <dd>{formatMhz(channel.rxHz)}</dd>
-        </div>
-        <div>
-          <dt>Offset</dt>
-          <dd>{offsetLabel}</dd>
-        </div>
-        <div>
-          <dt>TX tone</dt>
-          <dd>{formatTone(channel.txTone)}</dd>
-        </div>
-      </dl>
+      <p className="summary-meta">
+        <span>{offsetLabel}</span>
+        <span className={status.warn ? 'summary-band warn' : 'summary-band'}>
+          {status.label}
+        </span>
+      </p>
     </section>
   );
 }
