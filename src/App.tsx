@@ -9,7 +9,6 @@ import { RepeaterWizard } from './ui/RepeaterWizard.tsx';
 import { PresetPicker } from './ui/PresetPicker.tsx';
 import { ConnectWizard, WriteToRadioButton } from './ui/ConnectWizard.tsx';
 import { RadioPicker } from './ui/RadioPicker.tsx';
-import { GetStartedEmpty } from './ui/GetStartedEmpty.tsx';
 import { ToastViewport } from './ui/Toast.tsx';
 import { hasWebSerial } from './serial/capability.ts';
 import { useHonk } from './state/store.ts';
@@ -196,16 +195,7 @@ export function App() {
               <button onClick={() => setModal('organize')}>Organize</button>
             </div>
           </div>
-          {programmedCount === 0 ? (
-            <GetStartedEmpty
-              supportsDirectClone={supportsDirectClone}
-              onReadFromRadio={() => setModal('connect')}
-              onAddChannelPack={() => setModal('presets')}
-              onAddRepeater={() => setModal('repeater')}
-            />
-          ) : (
-            <ChannelTable />
-          )}
+          <ChannelTable />
         </section>
 
         <aside className="inspector-column" aria-label="Inspector">
