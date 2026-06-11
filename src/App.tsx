@@ -12,7 +12,7 @@ import { RadioPicker } from './ui/RadioPicker.tsx';
 import { ToastViewport } from './ui/Toast.tsx';
 import { hasWebSerial } from './serial/capability.ts';
 import { useHonk } from './state/store.ts';
-import { duplexDescription } from './radio/format.ts';
+import { duplexDescription, formatMhz } from './radio/format.ts';
 import { isFreqInBands } from './radios/util.ts';
 import type { RadioModel } from './radios/types.ts';
 import type { Channel } from './image/schema.ts';
@@ -290,12 +290,26 @@ function SelectedChannelSummary({
   index: number;
   radio: RadioModel;
 }) {
+  const chanLabel = String(index + 1).padStart(3, '0');
+
   if (!channel) {
     return (
       <section className="selected-summary empty-summary">
-        <span className="section-kicker">Selected</span>
-        <h2>Channel {index + 1}</h2>
-        <p>Empty memory slot</p>
+        <span className="section-kicker">Display</span>
+        <div className="lcd lcd-off">
+          <div className="lcd-top">
+            <span className="lcd-chan">CH {chanLabel}</span>
+            <span className="lcd-tag">OFF</span>
+          </div>
+          <div className="lcd-readout">
+            <span className="lcd-ghost" aria-hidden="true">888.8888</span>
+            <span className="lcd-value lcd-dim">———.————</span>
+          </div>
+          <div className="lcd-bottom">
+            <span className="lcd-name">empty memory</span>
+            <span className="lcd-unit">MHz</span>
+          </div>
+        </div>
       </section>
     );
   }
@@ -321,11 +335,23 @@ function SelectedChannelSummary({
 
   return (
     <section className="selected-summary">
-      <span className="section-kicker">Selected</span>
-      <h2>
-        Channel {index + 1}
-        {channel.name && <span>{channel.name}</span>}
-      </h2>
+      <span className="section-kicker">Display</span>
+      <div className="lcd">
+        <div className="lcd-top">
+          <span className="lcd-chan">CH {chanLabel}</span>
+          <span className="lcd-tag lcd-rx">
+            <i className="led" aria-hidden="true" /> RX
+          </span>
+        </div>
+        <div className="lcd-readout">
+          <span className="lcd-ghost" aria-hidden="true">888.8888</span>
+          <span className="lcd-value">{formatMhz(channel.rxHz)}</span>
+        </div>
+        <div className="lcd-bottom">
+          <span className="lcd-name">{channel.name || 'unnamed'}</span>
+          <span className="lcd-unit">MHz</span>
+        </div>
+      </div>
       <p className="summary-meta">
         <span>{offsetLabel}</span>
         <span className={status.warn ? 'summary-band warn' : 'summary-band'}>
