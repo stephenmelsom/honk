@@ -1,4 +1,4 @@
-import type { RadioModel } from './types.ts';
+import type { RadioModel, RadioSupport } from './types.ts';
 
 export const UV5R_MODEL_291 = new Uint8Array([0x50, 0xbb, 0xff, 0x20, 0x12, 0x07, 0x25]);
 export const UV5R_MODEL_ORIG = new Uint8Array([0x50, 0xbb, 0xff, 0x12, 0x03, 0x98, 0x4d]);
@@ -65,6 +65,7 @@ function identMatchesAny(magics: readonly Uint8Array[], bytes: Uint8Array): bool
 export function defineUv5rFamilyModel(options: {
   id: string;
   label: string;
+  support: RadioSupport;
   magics: readonly Uint8Array[];
   vhf: readonly [number, number];
   uhf: readonly [number, number];
@@ -73,6 +74,7 @@ export function defineUv5rFamilyModel(options: {
   return {
     id: options.id,
     label: options.label,
+    support: options.support,
     imageSize: 0x1808,
     channelCount: 128,
     memory: UV5R_MEMORY,

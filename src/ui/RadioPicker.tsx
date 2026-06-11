@@ -33,7 +33,7 @@ export function RadioPicker() {
         >
           {radios.map((r) => (
             <option key={r.id} value={r.id}>
-              {r.label}
+              {r.label}{r.support !== 'verified' ? ` (${r.support})` : ''}
             </option>
           ))}
         </select>

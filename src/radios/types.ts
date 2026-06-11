@@ -67,11 +67,15 @@ export interface FrequencyLimits {
   uhf?: FreqBand;
 }
 
+export type RadioSupport = 'verified' | 'beta' | 'experimental';
+
 export interface RadioModel {
   /** Stable identifier, used as a key in the registry and on `RadioImage`. */
   id: string;
   /** Display label shown in the UI picker. */
   label: string;
+  /** How well-tested this radio's support is. Shown in the UI as an honesty signal. */
+  support: RadioSupport;
   /** Total size of the saved .img file (including ident header). */
   imageSize: number;
   channelCount: number;

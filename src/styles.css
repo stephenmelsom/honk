@@ -273,6 +273,36 @@ select:focus {
   margin: 0.5rem 0;
 }
 
+.banner--warning {
+  background: rgba(214, 69, 47, 0.12);
+  border-color: rgba(214, 69, 47, 0.45);
+}
+
+.support-badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-family: var(--font-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.1em 0.45em;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-left: 0.4em;
+  line-height: 1.6;
+}
+
+.support-badge--beta {
+  background: rgba(255, 176, 0, 0.18);
+  border: 1px solid rgba(255, 176, 0, 0.4);
+  color: var(--amber);
+}
+
+.support-badge--experimental {
+  background: rgba(214, 69, 47, 0.14);
+  border: 1px solid rgba(214, 69, 47, 0.4);
+  color: var(--tx-red);
+}
+
 .source-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

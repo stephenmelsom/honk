@@ -5,6 +5,7 @@ const FTM100DR_HEADER = new Uint8Array([0x41, 0x48, 0x30, 0x33, 0x34, 0x24]); //
 export const FTM100DR: RadioModel = {
   id: 'ftm100dr',
   label: 'Yaesu FTM-100DR',
+  support: 'experimental',
   imageSize: 0x10000,
   channelCount: 500,
   imageCodec: 'yaesu-ftm',

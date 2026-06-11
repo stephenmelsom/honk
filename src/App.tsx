@@ -158,7 +158,13 @@ export function App() {
           <span className="section-kicker">Source</span>
           <h2>{sourceLabel}</h2>
           <p>
-            {radio.label} · {programmedCount} of {channels.length} channels programmed
+            {radio.label}
+            {radio.support !== 'verified' && (
+              <span className={`support-badge support-badge--${radio.support}`}>
+                {radio.support}
+              </span>
+            )}
+            {' '}· {programmedCount} of {channels.length} channels programmed
             {dirty ? ' · unsaved changes' : ''}
           </p>
         </div>
@@ -170,6 +176,13 @@ export function App() {
           <NewBlankButton />
         </div>
       </section>
+
+      {radio.support === 'experimental' && (
+        <p className="banner banner--warning">
+          Support for this radio is experimental and may not program correctly.
+          Back up your codeplug before writing.
+        </p>
+      )}
 
       {!supportsSerial && (
         <p className="banner">
