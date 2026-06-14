@@ -117,6 +117,11 @@ function SupportButtons() {
       >
         Star
       </a>
+      <p className="credits">
+        Protocol and codec logic derived from{' '}
+        <a href="https://chirp.danplanet.com/" target="_blank" rel="noreferrer">CHIRP</a>
+        {' '}(GPL v2).
+      </p>
     </footer>
   );
 }

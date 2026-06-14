@@ -1,4 +1,5 @@
-// UV-82 clone-mode protocol implementation, ported from chirp/drivers/uv5r.py.
+// SPDX-License-Identifier: GPL-2.0-only
+// UV-82 clone-mode protocol implementation, derived from CHIRP's chirp/drivers/uv5r.py.
 // Per-model details (magic bytes, image size, write ranges) come from a
 // RadioModel; the framing protocol itself is shared across the UV-5R/UV-82
 // family.

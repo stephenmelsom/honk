@@ -33,3 +33,12 @@ npm run lint
 
 Pushes to `main` trigger `.github/workflows/deploy.yml` which builds and
 publishes to GitHub Pages.
+
+## Credits
+
+honk's serial protocol implementation and codec logic (LBCD encoding, CTCSS/DCS
+tone tables, bitfield layout) are derived from [CHIRP](https://chirp.danplanet.com/),
+the open-source radio programming project. CHIRP is licensed under GPL v2.
+
+Thanks to the CHIRP contributors for the hard work of reverse-engineering these
+protocols and making them freely available.

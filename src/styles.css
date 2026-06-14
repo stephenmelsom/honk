@@ -402,6 +402,19 @@ select:focus {
   align-items: center;
 }
 
+.credits {
+  width: 100%;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-muted, #888);
+  margin: 0.25rem 0 0;
+}
+
+.credits a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .bmc-script-button,
 .github-star-button {
   display: inline-flex;
